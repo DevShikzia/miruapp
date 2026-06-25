@@ -1,0 +1,19 @@
+{
+  "name": "miru",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Miru App — Gestión económica familiar",
+  "scripts": {
+    "backend:dev": "cd backend && npm run dev",
+    "backend:build": "cd backend && npm run build",
+    "backend:start": "cd backend && npm start",
+    "frontend:dev": "cd frontend && ng serve",
+    "frontend:build": "cd frontend && ng build",
+    "frontend:test": "cd frontend && ng test",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2"
+  }
+}

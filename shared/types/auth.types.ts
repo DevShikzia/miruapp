@@ -6,7 +6,6 @@ export interface IUser {
   name: string
   email: string
   password: string
-  googleId?: string
   platformRole: PlatformRole
   familyId: string | null
   familyRole: FamilyRole | null
@@ -23,7 +22,7 @@ export interface IUserPublic {
   familyId: string | null
   familyRole: FamilyRole | null
   isActive: boolean
-  createdAt: Date
+  createdAt: string
 }
 
 export interface IRegisterRequest {
@@ -47,10 +46,6 @@ export interface ILoginResponse {
   user: IUserPublic
   accessToken: string
   refreshToken: string
-}
-
-export interface IGoogleLoginRequest {
-  credential: string
 }
 
 export interface IRefreshTokenRequest {

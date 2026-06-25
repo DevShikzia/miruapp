@@ -27,6 +27,20 @@ export interface IMember {
   joinedAt: string
 }
 
+export interface FamilyMember {
+  userId: string
+  role: 'family_admin' | 'member' | 'readonly'
+  invitedAt: string
+  acceptedAt: string | null
+}
+
+export interface FamilyData {
+  _id: string
+  name: string
+  members: FamilyMember[]
+  createdAt: string
+}
+
 export interface IFamilyBalance {
   totalIncome: number
   totalExpense: number

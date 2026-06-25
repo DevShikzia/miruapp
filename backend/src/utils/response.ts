@@ -7,7 +7,7 @@ import {
   ApiErrorDetail,
 } from '@shared/types/response.types'
 
-export function sendSuccess<T>(res: Response, data: T, mensaje: string, statusCode = 200): void {
+export function sendSuccess<T>(res: Response, data: T, mensaje = 'Operación exitosa', statusCode = 200): void {
   const response: ApiSuccessResponse<T> = { ok: true, data, mensaje }
   res.status(statusCode).json(response)
 }

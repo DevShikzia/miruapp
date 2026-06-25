@@ -6,6 +6,7 @@ export interface IUser {
   name: string
   email: string
   password: string
+  googleId?: string
   platformRole: PlatformRole
   familyId: string | null
   familyRole: FamilyRole | null
@@ -55,6 +56,10 @@ export interface IRefreshTokenRequest {
 export interface IRefreshTokenResponse {
   accessToken: string
   refreshToken: string
+}
+
+export interface IGoogleLoginRequest {
+  credential: string
 }
 
 export interface ILogoutRequest {

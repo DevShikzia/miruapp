@@ -150,3 +150,32 @@ Margin top: 32px. Centrado.
 - Exportar datos debe ser fácil de encontrar pero no estar en primer plano
 - El cierre de sesión debe tener doble confirmación para evitar accidentes
 - En v2: tema visual personalizado, estadísticas anuales, logros
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| POST | `/api/auth/logout` | Cerrar sesión |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/auth.controller.ts` | Manejo de sesión |
+| Service | `services/auth.service.ts` | Lógica de autenticación |
+| Middleware | `middlewares/auth.middleware.ts` | Verificación de JWT |
+| Model | `models/User.model.ts` | Schema de usuario |

@@ -165,3 +165,34 @@ Cada campo: label Inter 400, 12px, `#697586` | valor Inter 500, 14px, `#F0F2F5`,
 - Para deudas largas (12+ cuotas), la vista debe mantenerse clara y no abrumar
 - La información original colapsada mantiene la pantalla limpia
 - Al archivar una deuda, ésta desaparece de la lista activa pero queda en "Pagadas"
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/debts/:id` | Detalle de deuda |
+| POST | `/api/debts/:id/payments` | Agregar pago a deuda |
+| PUT | `/api/debts/:id/payments/:paymentIndex` | Editar un pago |
+| DELETE | `/api/debts/:id/payments/:paymentIndex` | Eliminar un pago |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/debt.controller.ts` | CRUD de deudas y pagos |
+| Service | `services/debt.service.ts` | Reglas de negocio de deudas |
+| Model | `models/Debt.model.ts` | Schema de MongoDB |

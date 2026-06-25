@@ -29,5 +29,6 @@ npm-debug.log*
 # Coverage
 coverage/
 
-# Private prompts (no subir al repo)
+# Private prompts / tareas (no subir al repo)
 _private/
+private/

@@ -161,3 +161,32 @@ Margin top: 24px.
 - El toggle recurrente debe estar visualmente separado del resto para no confundir con campos obligatorios
 - La experiencia debe sentirse rápida — minimizar transiciones entre pantallas
 - En v2: soporte para dividir gasto entre miembros del grupo familiar
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| POST | `/api/finance/expenses` | Crear nuevo gasto |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/finance.controller.ts` | Creación de gastos |
+| Service | `services/expense.service.ts` | Reglas de negocio de gastos |
+| Schema | `schemas/finance.schema.ts` | Validación Zod de gasto |
+| Model | `models/Expense.model.ts` | Schema de MongoDB |

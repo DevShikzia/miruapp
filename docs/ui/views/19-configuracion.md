@@ -206,3 +206,32 @@ Margin top: 40px. Centrado.
 - "Eliminar cuenta" debe estar visible pero no ser fácil de tocar por accidente
 - Los links legales son obligatorios pero no deben interrumpir el flujo
 - En v2: más opciones de apariencia, personalización de colores, backup en la nube
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| PATCH | `/api/auth` | Actualizar perfil de usuario |
+| POST | `/api/auth/logout` | Cerrar sesión |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/auth.controller.ts` | Manejo de sesión y perfil |
+| Service | `services/auth.service.ts` | Lógica de autenticación |
+| Model | `models/User.model.ts` | Schema de usuario |

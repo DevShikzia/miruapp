@@ -235,3 +235,37 @@ Posicionado en la parte inferior derecha, a 80px del bottom nav y 20px del borde
 - Evitar poner más de 7 elementos en la pantalla — la atención del usuario se diluye
 - Los skeletons deben verse ligeros, no frustrantes
 - El FAB no debe superponerse al contenido importante
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/dashboard` | Resumen del dashboard |
+| GET | `/api/finance/incomes` | Ingresos del mes |
+| GET | `/api/finance/expenses` | Gastos del mes |
+| GET | `/api/debts` | Deudas activas |
+| GET | `/api/savings` | Metas de ahorro |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/extra.controller.ts` | Dashboard endpoint |
+| Service | `services/dashboard.service.ts` | Reglas de negocio del resumen |
+| Controller | `controllers/finance.controller.ts` | Datos de ingresos/gastos |
+| Controller | `controllers/debt.controller.ts` | Deudas activas |
+| Controller | `controllers/saving.controller.ts` | Metas de ahorro |

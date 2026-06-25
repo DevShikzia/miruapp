@@ -36,7 +36,17 @@
 | 05 | `05-dashboard.md` | Dashboard | ✅ | 🚧 | Bottom nav completa. FAB con mini menú. Falta definir widgets configurables |
 | 06 | `06-movimientos.md` | Movimientos | ✅ | 🚧 | Filtros por mes/categoría/tipo. Scroll infinito. Falta vista de detalle de movimiento |
 | 07 | `07-crear-ingreso.md` | Crear ingreso | ✅ | 🚧 | 8 categorías. Faltan categorías personalizadas (v2) |
+| 07b | `07b-editar-ingreso.md` | Editar ingreso | ✅ | 🚧 | PUT `/api/finance/incomes/:id`. Misma UI que creación con campos pre-cargados |
 | 08 | `08-crear-gasto.md` | Crear gasto | ✅ | 🚧 | Tipo de pago + toggle recurrente. Falta división de gasto entre miembros (v2) |
+| 08b | `08b-editar-gasto.md` | Editar gasto | ✅ | 🚧 | PUT `/api/finance/expenses/:id`. Misma UI que creación con campos pre-cargados |
+
+---
+
+## Pantallas de Gastos Recurrentes
+
+| # | Archivo | Pantalla | Estado Docs | Estado Código | Notas |
+|---|---------|----------|:-----------:|:-------------:|-------|
+| 21 | `21-recurring-bills.md` | Gastos recurrentes | ✅ | 🚧 | Lista con toggles. CRUD completo en `/api/finance/recurring-bills` |
 
 ---
 
@@ -46,7 +56,8 @@
 |---|---------|----------|:-----------:|:-------------:|-------|
 | 09 | `09-deudas.md` | Deudas | ✅ | 🚧 | Lista con barra de progreso. Tags de urgencia. Falta ordenamiento avanzado |
 | 10 | `10-crear-deuda.md` | Crear deuda | ✅ | 🚧 | Soporte para crédito con interés. Falta compartir deuda entre miembros (v2) |
-| 11 | `11-detalle-deuda.md` | Detalle deuda | ✅ | 🚧 | Historial de pagos + registrar pago. Falta editar cuotas |
+| 10b | `10b-editar-deuda.md` | Editar deuda | ✅ | 🚧 | PUT `/api/debts/:id`. Monto bloqueado si ya hay pagos |
+| 11 | `11-detalle-deuda.md` | Detalle deuda | ✅ | 🚧 | Historial de pagos + registrar pago. Editar/eliminar pagos individuales |
 
 ---
 
@@ -56,6 +67,7 @@
 |---|---------|----------|:-----------:|:-------------:|-------|
 | 12 | `12-ahorros.md` | Ahorros | ✅ | 🚧 | Metas visuales con emoji. Falta gráfico de crecimiento (v2) |
 | 13 | `13-crear-meta.md` | Crear meta | ✅ | 🚧 | Selector de emoji + ahorro automático. Falta foto personalizada (v2) |
+| 13b | `13b-editar-meta.md` | Editar meta | ✅ | 🚧 | PUT `/api/savings/:id`. Monto objetivo bloqueado si ya hay aportes |
 
 ---
 
@@ -83,11 +95,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Total de pantallas | 20 |
-| Documentadas (✅) | 20 |
+| Total de pantallas | 25 |
+| Documentadas (✅) | 25 |
 | En revisión (🔄) | 0 |
 | Pendientes de doc (⬜) | 0 |
-| Pendientes de código (🚧) | 20 |
+| Pendientes de código (🚧) | 25 |
 | Features planificadas para v2 | 10 |
 
 ---

@@ -170,3 +170,33 @@ Margin top: 28px. Centrado.
 - El checkbox de términos debe ser fácil de tocar (área táctil mínima 44×44px)
 - El botón deshabilitado debe verse claramente inactivo pero no oculto
 - La transición de carga a éxito debe ser suave, nunca abrupta
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| POST | `/api/auth/register` | Registrar nuevo usuario |
+| POST | `/api/auth/google` | Registro con Google OAuth |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/auth.controller.ts` | Manejo de autenticación |
+| Service | `services/auth.service.ts` | Lógica de registro |
+| Schema | `schemas/auth.schema.ts` | Validación Zod de registro |
+| Middleware | `middlewares/rateLimit.middleware.ts` | Rate limiting en registro |

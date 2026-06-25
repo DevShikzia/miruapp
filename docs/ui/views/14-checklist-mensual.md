@@ -148,3 +148,32 @@ Cuando todas las tareas están marcadas:
 - El tono "palomita" de la checklist debe ser suave y gratificante
 - No más de 15 tareas por mes para no abrumar
 - En v2: compartir checklist con familia, asignar tareas a miembros específicos
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/checklist` | Checklist del mes actual |
+| PATCH | `/api/checklist/:month/items/:itemId` | Marcar/desmarcar tarea |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/extra.controller.ts` | Endpoints de checklist |
+| Service | `services/checklist.service.ts` | Reglas de negocio del checklist |
+| Model | `models/Checklist.model.ts` | Schema de MongoDB |

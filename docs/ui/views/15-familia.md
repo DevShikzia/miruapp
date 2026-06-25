@@ -178,3 +178,32 @@ Centrado verticalmente:
 - La actividad reciente mantiene a todos informados sin necesidad de preguntar
 - El estado "sin grupo" debe motivating, no solitario
 - En v2: chat grupal integrado, asignación de tareas por miembro, votación de gastos grandes
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/family/my` | Obtener grupo del usuario |
+| POST | `/api/family` | Crear grupo familiar |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/family.controller.ts` | Gestión del grupo familiar |
+| Service | `services/family.service.ts` | Reglas de negocio de familia |
+| Model | `models/Family.model.ts` | Schema de MongoDB |

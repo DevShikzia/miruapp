@@ -27,7 +27,7 @@ Miru resuelve todo esto en un solo lugar, accesible como app desde el celular.
 - Centralizar todos los ingresos y egresos del hogar
 - Hacer visible el estado financiero en tiempo real para todos los miembros
 - Evitar el olvido de pagos con recordatorios automáticos
-- Reducir deudas con seguimiento claro de cuotas y saldos
+- Reducir deudas con seguimiento claro de pagos y saldos
 - Fomentar el ahorro mediante metas visuales y progresivas
 - Ser simple de usar para personas sin conocimientos financieros
 
@@ -36,7 +36,7 @@ Miru resuelve todo esto en un solo lugar, accesible como app desde el celular.
 ## 👨‍👩‍👧 A quién está dirigida
 
 - Familias con más de un ingreso
-- Hogares con deudas en cuotas (préstamos, tarjetas, refinanciaciones)
+- Hogares con deudas activas (préstamos, tarjetas, financiación)
 - Personas que quieren aprender a organizar su economía
 - Cualquier grupo que comparta gastos (pareja, compañeros de casa, etc.)
 
@@ -64,17 +64,18 @@ Miru resuelve todo esto en un solo lugar, accesible como app desde el celular.
 - Ver historial de ingresos por mes
 - Total acumulado del mes en tiempo real
 
-### 📋 Gastos fijos
-- Lista de gastos recurrentes con monto y fecha de vencimiento
-- Marcar como pagado con un toque
-- Ver cuáles están pendientes y cuáles al día
+### 📋 Gastos recurrentes (Recurring Bills)
+- Lista de gastos recurrentes con monto y frecuencia (semanal, quincenal, mensual, etc.)
+- Activar o desactivar con un toque
+- Ver cuáles están activos y cuáles pausados
 - Agregar, editar o eliminar gastos fácilmente
 
 ### 💳 Deudas
-- Registrar cada deuda con monto total, cuotas y fecha de vencimiento
+- Registrar cada deuda con monto total, persona y fecha de vencimiento
+- Tipo: deuda a pagar (debtor) o cobrar (creditor)
 - Barra de progreso visual de cuánto se pagó y cuánto falta
 - Historial de pagos realizados por deuda
-- Alerta cuando una cuota está próxima a vencer
+- Alerta cuando un vencimiento está próximo
 
 ### ✅ Checklist mensual
 - Lista de todo lo que hay que pagar en el mes
@@ -146,7 +147,7 @@ Miru resuelve todo esto en un solo lugar, accesible como app desde el celular.
 - [x] Sistema de registro y login
 - [x] Crear y unirse a familia
 - [x] Gestión de ingresos
-- [x] Gestión de gastos fijos
+- [x] Gestión de gastos recurrentes
 - [x] Seguimiento de deudas
 - [x] Checklist mensual de pagos
 - [x] Metas de ahorro

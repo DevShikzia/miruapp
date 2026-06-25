@@ -87,3 +87,25 @@ Justo debajo de la línea, 8px de espacio.
 - No usar spinner, solo la barra de progreso lineal
 - El glow debe ser muy sutil, evitar que parezca un efecto de neón
 - En versión oscura pura, el negro del fondo debe ser exactamente `#0C0F14`, no negro puro
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+*(Ninguno — pantalla puramente visual)*
+
+## Dependencias del backend
+
+*(Ninguna — no consume datos del backend)*

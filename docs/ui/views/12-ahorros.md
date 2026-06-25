@@ -90,6 +90,28 @@ Cada meta es una **card aspiracional** con imagen opcional.
 
 ---
 
+### 3.5 Gestión de aportes
+
+#### Modal "Agregar dinero"
+Al tocar el botón dentro de una meta se abre un bottom sheet:
+
+- **Input de monto:** Inter 700, 28px, `#F0F2F5`, centrado, placeholder *"$0"*
+- **Selector de fecha:** opcional, pre-cargada con la fecha actual
+- **Botón "Ahorrar":** fondo `#C99A0A`, texto `#0C0F14`, Inter 700, 14px, radio 999px, altura 44px
+- **Acción:** POST `/api/savings/:id/contributions` — la barra se actualiza con animación
+- **Estados:** cargando (botón animado), error (*"No pudimos registrar el aporte"*), éxito (cierra modal + actualiza progreso)
+
+#### Historial de aportes
+Accesible desde el detalle de meta (al tocar la card):
+
+- Lista cronológica de aportes con monto y fecha
+- Cada item: fecha (Inter 400, 12px, `#697586`) + monto (Inter 600, 14px, `#C99A0A`)
+- Swipe left sobre un aporte: permite eliminarlo (DELETE `/api/savings/:id/contributions/:index`)
+- Modal de confirmación al eliminar: *"¿Eliminar este aporte?"*
+- Estado vacío: *"Todavía no hiciste aportes a esta meta"*
+
+---
+
 ### 4. Meta destacada (si hay una activa)
 Si el usuario tiene una meta en progreso, puede mostrarse con un diseño especial (la más cercana a completarse).
 
@@ -138,3 +160,37 @@ Centrado verticalmente:
 - La meta destacada ayuda a enfocar al usuario en un objetivo prioritario
 - Evitar mostrar montos negativos o deudas en esta pantalla — es un espacio positivo
 - En v2: gráfico de crecimiento del ahorro en el tiempo
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/savings` | Listar metas de ahorro |
+| GET | `/api/savings/:id` | Detalle de meta con historial |
+| POST | `/api/savings` | Crear meta de ahorro |
+| PUT | `/api/savings/:id` | Actualizar meta |
+| DELETE | `/api/savings/:id` | Eliminar meta |
+| POST | `/api/savings/:id/contributions` | Agregar aporte a meta |
+| DELETE | `/api/savings/:id/contributions/:index` | Eliminar aporte |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/saving.controller.ts` | CRUD de metas |
+| Service | `services/saving.service.ts` | Reglas de negocio de ahorro |
+| Model | `models/Saving.model.ts` | Schema de MongoDB |

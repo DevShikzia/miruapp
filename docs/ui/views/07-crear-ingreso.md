@@ -147,3 +147,32 @@ Margin top: 28px.
 - Evitar animaciones innecesarias en el monto al escribir (solo formateo limpio)
 - El selector de quién recibe solo aparece si el usuario pertenece a un grupo familiar con más de 1 miembro
 - Considerar agregar un toggle "Ingreso recurrente" en v2
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| POST | `/api/finance/incomes` | Crear nuevo ingreso |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/finance.controller.ts` | Creación de ingresos |
+| Service | `services/income.service.ts` | Reglas de negocio de ingresos |
+| Schema | `schemas/finance.schema.ts` | Validación Zod de ingreso |
+| Model | `models/Income.model.ts` | Schema de MongoDB |

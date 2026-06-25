@@ -112,3 +112,25 @@ Fija en la parte baja de la pantalla, a 48px del borde inferior. Padding horizon
 - El gato del slide 3 es el primer guiño al carácter de Miru — debe sentirse cálido
 - Evitar íconos de banco, billete con símbolo de dólar excesivo, gráficos de velas
 - El espacio en blanco es intencional — la pantalla no debe sentirse llena
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+*(Ninguno — pantalla puramente visual)*
+
+## Dependencias del backend
+
+*(Ninguna — no consume datos del backend)*

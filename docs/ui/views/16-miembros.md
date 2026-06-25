@@ -128,3 +128,34 @@ Solo visible para el administrador del grupo, al final de la lista:
 - El acceso a esta pantalla desde Familia debe ser intuitivo
 - Los stats financieros por miembro fomentan transparencia
 - En v2: permisos granulares por miembro (solo lectura, puede editar, administrador)
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| POST | `/api/family/invite` | Invitar miembro (admin) |
+| POST | `/api/family/respond-invite` | Aceptar/rechazar invitación |
+| DELETE | `/api/family/:familyId/members/:userId` | Eliminar miembro (admin) |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/family.controller.ts` | Gestión de miembros |
+| Service | `services/family.service.ts` | Reglas de negocio de familia |
+| Model | `models/Family.model.ts` | Schema de MongoDB |
+| Schema | `schemas/family.schema.ts` | Validación Zod de invitación |

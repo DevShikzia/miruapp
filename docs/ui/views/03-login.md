@@ -139,4 +139,34 @@ Margin top: 32px. Centrado.
 - No hay imagen de fondo ni patrón — el negro sólido es intencional
 - El formulario no debe verse intimidante — los inputs con fondo `#1E2530` dan calidez
 - El error no debe ser agresivo — el rojo `#F87171` es suave
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| POST | `/api/auth/login` | Iniciar sesión |
+| POST | `/api/auth/google` | Login con Google OAuth |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/auth.controller.ts` | Manejo de autenticación |
+| Service | `services/auth.service.ts` | Lógica de login/registro |
+| Schema | `schemas/auth.schema.ts` | Validación Zod de credenciales |
+| Middleware | `middlewares/rateLimit.middleware.ts` | Rate limiting en login |
 - El copy "Bienvenida/o de vuelta" puede personalizarse si hay nombre guardado

@@ -44,7 +44,39 @@ Dos chips lado a lado:
 
 ---
 
-### 3. Lista de notificaciones
+### 3. Preferencias de notificación
+Margin top: 16px.
+
+Card colapsable con fondo `#161B24`, radio 20px, borde `rgba(255,255,255,0.06)`, padding 16px.
+
+```
+🔔  Preferencias de notificación          >
+```
+
+Al expandir, muestra toggles para cada tipo de notificación:
+
+| Tipo de notificación | Por defecto |
+|---|---|
+| Nuevos gastos | ON |
+| Nuevos ingresos | ON |
+| Pagos de deudas | ON |
+| Metas alcanzadas | ON |
+| Invitaciones | ON |
+| Recordatorios | ON |
+| Checklist | ON |
+| Nuevos miembros | ON |
+
+Cada item:
+- Label: Inter 500, 14px, `#F0F2F5`
+- Toggle: 44×24px, radio 999px
+  - ON: fondo `#E4B3E9`, círculo `#F0F2F5`
+  - OFF: fondo `#1E2530`, círculo `#697586`
+
+> **Nota:** Las preferencias se gestionan desde Configuración (ver `19-configuracion.md`). Esta sección es un acceso rápido a las más usadas.
+
+---
+
+### 4. Lista de notificaciones
 Margin top: 12px.
 
 Cada notificación es un item con altura variable según el contenido:
@@ -137,3 +169,34 @@ Cuando todas las notificaciones están leídas:
 - No usar sonidos ni vibraciones excesivas para notificaciones
 - Agrupar notificaciones del mismo tipo (ej. varios gastos seguidos) para no saturar
 - En v2: preferencias de notificación por tipo, resumen semanal
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/notifications` | Listar notificaciones |
+| GET | `/api/notifications/unread-count` | Contar no leídas |
+| PATCH | `/api/notifications/:id/read` | Marcar una como leída |
+| PATCH | `/api/notifications/read-all` | Marcar todas como leídas |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/extra.controller.ts` | Endpoints de notificaciones |
+| Service | `services/notification.service.ts` | Reglas de negocio de notificaciones |
+| Model | `models/Notification.model.ts` | Schema de MongoDB |

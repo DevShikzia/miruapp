@@ -1,4 +1,4 @@
-# 🗂️ Miru — Estructura del Proyecto
+# Miru — Estructura del Proyecto
 
 ## Organización general (Monorepo)
 
@@ -9,12 +9,13 @@ Miru/
 ├── shared/
 ├── .gitignore
 ├── README.md
-└── package.json          → scripts globales del monorepo
+├── package.json          → scripts globales del monorepo
+└── AGENTS.md             → contexto para asistentes IA
 ```
 
 ---
 
-## ⚙️ BACKEND — Node.js + TypeScript + Express
+## BACKEND — Node.js + TypeScript + Express
 
 ```
 backend/
@@ -22,38 +23,34 @@ backend/
 │   │
 │   ├── config/
 │   │   ├── db.ts                → conexión a MongoDB
-│   │   ├── env.ts               → variables de entorno tipadas
-│   │   └── socket.ts            → configuración de Socket.io
+│   │   └── env.ts               → variables de entorno tipadas
 │   │
 │   ├── controllers/
 │   │   ├── auth.controller.ts
 │   │   ├── family.controller.ts
-│   │   ├── income.controller.ts
-│   │   ├── expense.controller.ts
+│   │   ├── finance.controller.ts  → incomes, expenses, recurring-bills
 │   │   ├── debt.controller.ts
-│   │   ├── payment.controller.ts
 │   │   ├── saving.controller.ts
-│   │   └── notification.controller.ts
+│   │   └── extra.controller.ts    → dashboard, checklist, notifications
 │   │
 │   ├── models/
 │   │   ├── User.model.ts
 │   │   ├── Family.model.ts
 │   │   ├── Income.model.ts
 │   │   ├── Expense.model.ts
+│   │   ├── RecurringBill.model.ts
 │   │   ├── Debt.model.ts
-│   │   ├── Payment.model.ts
 │   │   ├── Saving.model.ts
+│   │   ├── Checklist.model.ts
 │   │   └── Notification.model.ts
 │   │
 │   ├── routes/
 │   │   ├── auth.routes.ts
 │   │   ├── family.routes.ts
-│   │   ├── income.routes.ts
-│   │   ├── expense.routes.ts
+│   │   ├── finance.routes.ts      → incomes, expenses, recurring-bills
 │   │   ├── debt.routes.ts
-│   │   ├── payment.routes.ts
 │   │   ├── saving.routes.ts
-│   │   └── notification.routes.ts
+│   │   └── extra.routes.ts        → dashboard, checklist, notifications
 │   │
 │   ├── middlewares/
 │   │   ├── auth.middleware.ts       → verificar JWT
@@ -64,36 +61,36 @@ backend/
 │   │
 │   ├── services/
 │   │   ├── auth.service.ts          → lógica de login/registro
-│   │   ├── token.service.ts         → generar y validar JWT
 │   │   ├── family.service.ts
 │   │   ├── income.service.ts
 │   │   ├── expense.service.ts
+│   │   ├── recurringBill.service.ts
 │   │   ├── debt.service.ts
 │   │   ├── saving.service.ts
-│   │   └── push.service.ts          → enviar notificaciones push
-│   │
-│   ├── cron/
-│   │   ├── index.ts                 → registrar todas las tareas
-│   │   ├── paymentReminder.cron.ts  → aviso día antes del vencimiento
-│   │   ├── weeklySummary.cron.ts    → resumen semanal
-│   │   └── monthlyReset.cron.ts     → reiniciar checklist mensual
-│   │
-│   ├── sockets/
-│   │   ├── index.ts                 → inicializar eventos
-│   │   ├── income.socket.ts         → emitir nuevo ingreso
-│   │   ├── expense.socket.ts        → emitir nuevo gasto
-│   │   └── payment.socket.ts        → emitir pago realizado
+│   │   ├── checklist.service.ts
+│   │   ├── notification.service.ts
+│   │   ├── dashboard.service.ts
+│   │   ├── cron.service.ts          → tareas programadas (node-cron)
+│   │   └── socket.service.ts        → inicializar eventos Socket.io
 │   │
 │   ├── schemas/                     → validaciones Zod
 │   │   ├── auth.schema.ts
-│   │   ├── income.schema.ts
-│   │   ├── expense.schema.ts
-│   │   └── debt.schema.ts
+│   │   ├── family.schema.ts
+│   │   ├── finance.schema.ts        → incomes, expenses, recurring-bills
+│   │   ├── debt.schema.ts
+│   │   ├── saving.schema.ts
+│   │   └── extra.schema.ts          → checklist, notifications
 │   │
-│   └── utils/
-│       ├── bcrypt.ts
-│       ├── response.ts              → formato estándar de respuesta
-│       └── date.ts                  → helpers de fechas
+│   ├── utils/
+│   │   ├── bcrypt.ts
+│   │   ├── jwt.ts
+│   │   ├── response.ts              → formato estándar de respuesta
+│   │   ├── errors.ts                → clases de error personalizadas
+│   │   ├── date.ts                  → helpers de fechas
+│   │   └── logger.ts                → logging estructurado
+│   │
+│   └── scripts/
+│       └── seed.ts                  → datos de prueba
 │
 ├── .env
 ├── .env.example
@@ -103,12 +100,12 @@ backend/
 
 ---
 
-## 🗄️ MODELOS DE BASE DE DATOS
+## MODELOS DE BASE DE DATOS
 
 ### User
 ```typescript
 {
-  _id, name, email, password,
+  _id, name, email, password, googleId,
   platformRole: 'superadmin' | 'agent' | 'user',
   familyId: string | null,
   familyRole: 'family_admin' | 'member' | 'readonly' | null,
@@ -121,66 +118,95 @@ backend/
 ### Family
 ```typescript
 {
-  _id, name, adminId,
-  members: [userId],
-  inviteCode, createdAt
+  _id, name,
+  inviteCode: string,
+  members: [{
+    userId, role: 'family_admin' | 'member' | 'readonly',
+    invitedAt: Date, acceptedAt: Date | null
+  }],
+  createdAt, updatedAt
 }
 ```
 
 ### Income
 ```typescript
 {
-  _id, familyId, userId,
-  description, amount,
-  category, date, createdAt
+  _id, familyId, createdBy,
+  amount, category, description, date,
+  isRecurring: boolean,
+  createdAt
 }
 ```
 
-### Expense (gasto del día a día)
+### Expense
 ```typescript
 {
-  _id, familyId, userId,
-  description, amount,
-  category, date, createdAt
+  _id, familyId, createdBy,
+  amount, category, description, date,
+  paymentType: 'cash' | 'credit_card' | 'debit_card' | 'transfer',
+  isEssential: boolean,
+  createdAt
 }
 ```
 
-### RecurringBill (gasto fijo mensual)
+### RecurringBill
 ```typescript
 {
-  _id, familyId, name,
-  amount, dueDay, category,
-  isPaid, paidAt, paidBy,
-  recurring: true, createdAt
+  _id, familyId, createdBy,
+  name, amount, category,
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly',
+  nextDueDate: string,
+  isActive: boolean,
+  createdAt
 }
 ```
 
 ### Debt
 ```typescript
 {
-  _id, familyId, name,
-  totalAmount, remainingAmount,
-  installments, installmentAmount,
-  dueDay, payments: [paymentId]
+  _id, familyId, createdBy,
+  type: 'creditor' | 'debtor',
+  personName, totalAmount, description, dueDate, isPaid,
+  payments: [{ amount, date, description }],
+  createdAt
 }
 ```
 
 ### Saving
 ```typescript
 {
-  _id, familyId, name,
-  targetAmount, currentAmount,
-  deadline, contributions: [{
-    amount: number,
-    userId: ObjectId,
-    date: Date
-  }]
+  _id, familyId, createdBy,
+  name, targetAmount, currentAmount, deadline, description,
+  contributions: [{ amount, date }],
+  createdAt
+}
+```
+
+### Checklist
+```typescript
+{
+  _id, familyId, month,
+  items: [{
+    label, completed, completedBy, completedAt
+  }],
+  createdAt, updatedAt
+}
+```
+
+### Notification
+```typescript
+{
+  _id, userId,
+  type: 'new_expense' | 'new_income' | 'debt_paid' | 'goal_reached'
+      | 'invitation' | 'reminder' | 'checklist' | 'new_member',
+  title, body, data,
+  isRead, createdAt
 }
 ```
 
 ---
 
-## 🎨 FRONTEND — Angular + TailwindCSS
+## FRONTEND — Angular + TailwindCSS
 
 ```
 frontend/
@@ -196,33 +222,25 @@ frontend/
 │   │   │   │   └── refresh.interceptor.ts → renueva token si expiró
 │   │   │   └── services/
 │   │   │       ├── auth.service.ts
-│   │   │       ├── socket.service.ts
-│   │   │       └── push.service.ts
+│   │   │       └── socket.service.ts
 │   │   │
 │   │   ├── auth/
 │   │   │   ├── login/
-│   │   │   │   ├── login.component.ts
-│   │   │   │   └── login.component.html
 │   │   │   ├── register/
 │   │   │   └── invite/                    → unirse a familia con código
 │   │   │
 │   │   ├── dashboard/
-│   │   │   ├── dashboard.component.ts
-│   │   │   ├── dashboard.component.html
 │   │   │   └── widgets/
 │   │   │       ├── balance-card/
 │   │   │       ├── semaforo/
 │   │   │       └── next-payment/
 │   │   │
-│   │   ├── ingresos/
-│   │   │   ├── lista-ingresos/
+│   │   ├── finanzas/
+│   │   │   ├── movimientos/
 │   │   │   ├── form-ingreso/
-│   │   │   └── ingresos.service.ts
-│   │   │
-│   │   ├── gastos/
-│   │   │   ├── lista-gastos/
 │   │   │   ├── form-gasto/
-│   │   │   └── gastos.service.ts
+│   │   │   ├── recurrentes/
+│   │   │   └── finanzas.service.ts
 │   │   │
 │   │   ├── deudas/
 │   │   │   ├── lista-deudas/
@@ -230,14 +248,13 @@ frontend/
 │   │   │   ├── form-deuda/
 │   │   │   └── deudas.service.ts
 │   │   │
-│   │   ├── checklist/
-│   │   │   ├── checklist.component.ts
-│   │   │   └── checklist.service.ts
-│   │   │
 │   │   ├── ahorro/
 │   │   │   ├── lista-metas/
 │   │   │   ├── form-meta/
 │   │   │   └── ahorro.service.ts
+│   │   │
+│   │   ├── checklist/
+│   │   │   └── checklist.service.ts
 │   │   │
 │   │   ├── familia/
 │   │   │   ├── miembros/
@@ -268,85 +285,88 @@ frontend/
 
 ---
 
-## 🔗 API ENDPOINTS
+## API ENDPOINTS
 
-### Auth
+### Auth (`/api/auth`)
 ```
-POST   /api/auth/register
-POST   /api/auth/login
-POST   /api/auth/logout
-POST   /api/auth/refresh
-POST   /api/auth/google
-```
-
-### Familia
-```
-POST   /api/family/create
-POST   /api/family/join
-GET    /api/family/members
-DELETE /api/family/member/:id
+POST   /api/auth/register         → registrar usuario
+POST   /api/auth/login            → iniciar sesión
+POST   /api/auth/logout           → cerrar sesión (requiere auth)
+POST   /api/auth/refresh          → renovar access token
+POST   /api/auth/google           → login con Google OAuth
 ```
 
-### Ingresos
+### Familia (`/api/family`)
 ```
-GET    /api/incomes
-POST   /api/incomes
-PUT    /api/incomes/:id
-DELETE /api/incomes/:id
-```
-
-### Gastos (Expenses)
-```
-GET    /api/expenses
-POST   /api/expenses
-PUT    /api/expenses/:id
-DELETE /api/expenses/:id
+GET    /api/family/my             → obtener grupo del usuario
+POST   /api/family                → crear grupo familiar
+POST   /api/family/join           → unirse con código de invitación
+POST   /api/family/invite         → invitar miembro (admin)
+POST   /api/family/respond-invite → aceptar/rechazar invitación
+DELETE /api/family/:familyId/members/:userId  → eliminar miembro (admin)
 ```
 
-### Deudas
+### Finanzas (`/api/finance`)
 ```
-GET    /api/debts
-POST   /api/debts
-PUT    /api/debts/:id
-POST   /api/debts/:id/payment
-GET    /api/debts/:id/history
+POST   /api/finance/incomes       → crear ingreso
+GET    /api/finance/incomes       → listar ingresos
+GET    /api/finance/incomes/:id   → detalle de ingreso
+PUT    /api/finance/incomes/:id   → actualizar ingreso
+DELETE /api/finance/incomes/:id   → eliminar ingreso
+
+POST   /api/finance/expenses      → crear gasto
+GET    /api/finance/expenses      → listar gastos
+PUT    /api/finance/expenses/:id  → actualizar gasto
+DELETE /api/finance/expenses/:id  → eliminar gasto
+
+POST   /api/finance/recurring-bills       → crear gasto recurrente
+GET    /api/finance/recurring-bills       → listar recurrentes
+PATCH  /api/finance/recurring-bills/:id/toggle  → activar/desactivar
+DELETE /api/finance/recurring-bills/:id   → eliminar recurrente
 ```
 
-### Ahorro
+### Deudas (`/api/debts`)
 ```
-GET    /api/savings
-POST   /api/savings
-POST   /api/savings/:id/contribute
-DELETE /api/savings/:id
-```
-
-### Gastos fijos (RecurringBills)
-```
-GET    /api/recurring-bills
-POST   /api/recurring-bills
-PUT    /api/recurring-bills/:id
-PATCH  /api/recurring-bills/:id/pay
-DELETE /api/recurring-bills/:id
+GET    /api/debts                 → listar deudas
+GET    /api/debts/:id             → detalle de deuda
+POST   /api/debts                 → crear deuda
+PUT    /api/debts/:id             → actualizar deuda
+DELETE /api/debts/:id             → eliminar deuda
+POST   /api/debts/:id/payments    → agregar pago
+PUT    /api/debts/:id/payments/:paymentIndex   → editar pago
+DELETE /api/debts/:id/payments/:paymentIndex   → eliminar pago
 ```
 
-### Checklist mensual
+### Ahorro (`/api/savings`)
 ```
-GET    /api/checklist            → checklist del mes actual
-POST   /api/checklist            → agregar tarea personalizada
-PATCH  /api/checklist/:id/toggle → marcar/desmarcar tarea
-DELETE /api/checklist/:id
+GET    /api/savings               → listar metas
+GET    /api/savings/:id           → detalle de meta
+POST   /api/savings               → crear meta
+PUT    /api/savings/:id           → actualizar meta
+DELETE /api/savings/:id           → eliminar meta
+POST   /api/savings/:id/contributions        → agregar aporte
+DELETE /api/savings/:id/contributions/:index  → eliminar aporte
 ```
 
-### Notificaciones
+### Dashboard / Checklist / Notificaciones (`/api`)
 ```
-GET    /api/notifications         → notificaciones del usuario
-PATCH  /api/notifications/read    → marcar todas como leídas
-PATCH  /api/notifications/:id/read → marcar una como leída
+GET    /api/dashboard                    → resumen del dashboard
+GET    /api/checklist                    → checklist del mes actual
+PATCH  /api/checklist/:month/items/:itemId  → marcar/desmarcar tarea
+GET    /api/notifications                → notificaciones del usuario
+GET    /api/notifications/unread-count   → cantidad no leídas
+PATCH  /api/notifications/:id/read       → marcar una como leída
+PATCH  /api/notifications/read-all       → marcar todas como leídas
+```
+
+### Health
+```
+GET    /api/health                → health check
 ```
 
 ---
 
-## 🚀 DEPLOY
+## DEPLOY
 
 ```
 Miru/
@@ -368,7 +388,7 @@ VAPID_PRIVATE_KEY=...
 
 ---
 
-## 📦 DEPENDENCIAS PRINCIPALES
+## DEPENDENCIAS PRINCIPALES
 
 ### Backend
 ```json

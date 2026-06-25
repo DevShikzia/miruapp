@@ -148,3 +148,34 @@ Centrado verticalmente en el espacio disponible:
 - Los gestos swipe left/right pueden ser añadidos en v2 para acciones rápidas (editar, eliminar)
 - Mantener el resumen del período siempre visible arriba incluso al hacer scroll (sticky)
 - Los items con montos muy grandes ($ 1.234.567) no deben romper el layout
+
+---
+
+## Documentación relacionada
+
+| Documento | Descripción |
+|---|---|
+| [`docs/miru-estructura.md`](../miru-estructura.md) | Estructura del proyecto, rutas, modelos y endpoints |
+| [`docs/miru-reglas-frontend.md`](../miru-reglas-frontend.md) | Reglas de desarrollo frontend |
+| [`docs/ui/design-system.md`](design-system.md) | Sistema de diseño (colores, tipografía, componentes) |
+| [`docs/api/api-schemas.md`](../api/api-schemas.md) | Schemas de validación y DTOs de la API |
+| [`docs/api/shared-types.md`](../api/shared-types.md) | Tipos compartidos entre frontend y backend |
+| [`docs/api/miru-roles.md`](../api/miru-roles.md) | Roles y permisos del sistema |
+| [`docs/components/TEMPLATE.md`](../components/TEMPLATE.md) | Template para documentar componentes |
+
+## Endpoints relacionados
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/finance/incomes` | Listar ingresos del grupo |
+| GET | `/api/finance/expenses` | Listar gastos del grupo |
+
+## Dependencias del backend
+
+| Archivo | Ruta | Propósito |
+|---|---|---|
+| Controller | `controllers/finance.controller.ts` | Lógica de ingresos/gastos |
+| Service | `services/income.service.ts` | Reglas de negocio de ingresos |
+| Service | `services/expense.service.ts` | Reglas de negocio de gastos |
+| Model | `models/Income.model.ts` | Schema de ingresos |
+| Model | `models/Expense.model.ts` | Schema de gastos |

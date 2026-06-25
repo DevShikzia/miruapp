@@ -15,7 +15,7 @@ interface Slide {
     <div class="onboarding"
       (touchstart)="onTouchStart($event)"
       (touchend)="onTouchEnd($event)">
-      <div class="slides-wrapper" [style.transform]="'translateX(-' + currentSlide * 100 + '%)'">
+      <div class="slides-wrapper" [style.transform]="'translateX(-' + currentSlide * 100 + 'vw)'">
         <!-- Slide 1 -->
         <div class="slide">
           <div class="illustration illustration-1">

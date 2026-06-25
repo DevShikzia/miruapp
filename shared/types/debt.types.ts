@@ -50,3 +50,54 @@ export interface IDebtDetail {
   payments: IPayment[]
   progress: number
 }
+
+export interface PaymentData {
+  id: string
+  amount: number
+  date: string
+  description: string
+}
+
+export interface DebtData {
+  _id: string
+  familyId: string
+  type: 'creditor' | 'debtor'
+  personName: string
+  totalAmount: number
+  description: string
+  dueDate: string
+  isPaid: boolean
+  paidAmount: number
+  progress: number
+  payments: PaymentData[]
+  createdBy: string
+  createdAt: string
+}
+
+export interface CreateDebtRequest {
+  type: 'creditor' | 'debtor'
+  personName: string
+  totalAmount: number
+  description?: string
+  dueDate?: string
+}
+
+export interface UpdateDebtRequest {
+  personName?: string
+  totalAmount?: number
+  description?: string
+  dueDate?: string
+  isPaid?: boolean
+}
+
+export interface CreatePaymentRequest {
+  amount: number
+  date: string
+  description?: string
+}
+
+export interface UpdatePaymentRequest {
+  amount?: number
+  date?: string
+  description?: string
+}

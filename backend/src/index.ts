@@ -7,6 +7,7 @@ import { errorMiddleware } from './middlewares/error.middleware'
 import authRoutes from './routes/auth.routes'
 import familyRoutes from './routes/family.routes'
 import financeRoutes from './routes/finance.routes'
+import debtRoutes from './routes/debt.routes'
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/family', familyRoutes)
 app.use('/api/finance', financeRoutes)
+app.use('/api/debts', debtRoutes)
 app.use(errorMiddleware)
 
 async function start(): Promise<void> {

@@ -37,6 +37,7 @@ export interface FamilyMember {
 export interface FamilyData {
   _id: string
   name: string
+  inviteCode: string
   members: FamilyMember[]
   createdAt: string
 }

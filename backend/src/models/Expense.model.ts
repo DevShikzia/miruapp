@@ -6,6 +6,7 @@ export interface IExpenseDocument extends Document {
   category: string
   description: string
   date: string
+  paymentType: 'cash' | 'credit_card' | 'debit_card' | 'transfer'
   isEssential: boolean
   createdBy: string
   createdAt: Date
@@ -17,6 +18,7 @@ const ExpenseSchema = new Schema<IExpenseDocument>({
   category: { type: String, required: true },
   description: { type: String, default: '' },
   date: { type: String, required: true },
+  paymentType: { type: String, enum: ['cash', 'credit_card', 'debit_card', 'transfer'], default: 'cash' },
   isEssential: { type: Boolean, default: false },
   createdBy: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },

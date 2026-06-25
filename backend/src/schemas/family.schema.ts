@@ -16,3 +16,7 @@ export const respondInviteSchema = z.object({
   inviteId: z.string().min(1, 'ID de invitación requerido'),
   accept: z.boolean(),
 })
+
+export const joinFamilySchema = z.object({
+  inviteCode: z.string().length(8, 'El código de invitación debe tener 8 caracteres'),
+})

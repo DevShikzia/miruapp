@@ -18,7 +18,7 @@ export async function createIncome(req: AuthRequest, res: Response, next: NextFu
 
 export async function getAllIncomes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { startDate, endDate } = req.query as any
+    const { startDate, endDate } = req.query as { startDate?: string; endDate?: string }
     const result = await incomeService.getAll(getFamilyId(req), startDate, endDate)
     sendSuccessPaginated(res, result, result.length)
   } catch (error) { next(error) }
@@ -54,7 +54,7 @@ export async function createExpense(req: AuthRequest, res: Response, next: NextF
 
 export async function getAllExpenses(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { startDate, endDate } = req.query as any
+    const { startDate, endDate } = req.query as { startDate?: string; endDate?: string }
     const result = await expenseService.getAll(getFamilyId(req), startDate, endDate)
     sendSuccessPaginated(res, result, result.length)
   } catch (error) { next(error) }

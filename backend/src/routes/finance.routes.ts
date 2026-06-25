@@ -6,6 +6,7 @@ import {
   createIncomeSchema, updateIncomeSchema,
   createExpenseSchema, updateExpenseSchema,
   createRecurringBillSchema, updateRecurringBillSchema,
+  toggleRecurringBillSchema,
 } from '../schemas/finance.schema'
 import * as financeController from '../controllers/finance.controller'
 
@@ -26,7 +27,7 @@ router.delete('/expenses/:id', financeController.deleteExpense)
 
 router.post('/recurring-bills', validate(createRecurringBillSchema), financeController.createRecurringBill)
 router.get('/recurring-bills', financeController.getAllRecurringBills)
-router.patch('/recurring-bills/:id/toggle', financeController.toggleRecurringBill)
+router.patch('/recurring-bills/:id/toggle', validate(toggleRecurringBillSchema), financeController.toggleRecurringBill)
 router.delete('/recurring-bills/:id', financeController.deleteRecurringBill)
 
 export default router

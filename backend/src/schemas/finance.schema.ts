@@ -17,6 +17,7 @@ export const createExpenseSchema = z.object({
   category: z.string().min(1, 'La categoría es obligatoria'),
   description: z.string().max(200).optional().default(''),
   date: z.string().regex(dateRegex, 'Formato de fecha inválido (YYYY-MM-DD)'),
+  paymentType: z.enum(['cash', 'credit_card', 'debit_card', 'transfer']).optional().default('cash'),
   isEssential: z.boolean().optional().default(false),
 })
 
@@ -32,3 +33,5 @@ export const createRecurringBillSchema = z.object({
 })
 
 export const updateRecurringBillSchema = createRecurringBillSchema.partial()
+
+export const toggleRecurringBillSchema = z.object({})

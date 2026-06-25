@@ -28,6 +28,7 @@ export interface ExpenseData {
   category: string
   description: string
   date: string
+  paymentType: 'cash' | 'credit_card' | 'debit_card' | 'transfer'
   isEssential: boolean
   createdBy: string
   createdAt: string

@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose'
 import { IncomeModel, IIncomeDocument } from '../models/Income.model'
 import { CreateIncomeRequest, UpdateIncomeRequest, IncomeData } from '@shared/types/income.types'
 import { NotFoundError } from '../utils/errors'
@@ -22,7 +23,7 @@ export async function create(data: CreateIncomeRequest, familyId: string, userId
 }
 
 export async function getAll(familyId: string, startDate?: string, endDate?: string): Promise<IncomeData[]> {
-  const filter: any = { familyId }
+  const filter: FilterQuery<IIncomeDocument> = { familyId }
   if (startDate || endDate) {
     filter.date = {}
     if (startDate) filter.date.$gte = startDate

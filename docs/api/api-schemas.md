@@ -2,7 +2,7 @@
 
 > Documentación completa de todos los endpoints de la API REST.
 > Formato de respuesta estándar definido en `shared/types/response.types.ts`.
-> Todas las fechas en ISO 8601 a menos que se especifique lo contrario.
+> Todas las fechas en ISO 8601 (YYYY-MM-DD) a menos que se especifique lo contrario.
 
 ---
 
@@ -23,8 +23,6 @@
   "ok": true,
   "data": [],
   "total": 42,
-  "page": 1,
-  "limit": 20,
   "mensaje": "Lista obtenida correctamente"
 }
 ```
@@ -191,6 +189,8 @@ Inicia sesión con email y contraseña.
 
 Renueva el access token usando el refresh token.
 
+**Rate limit:** 10 solicitudes por IP cada 15 minutos
+
 **Request body:**
 | Campo | Tipo | Obligatorio |
 |-------|------|:-----------:|
@@ -222,7 +222,8 @@ Renueva el access token usando el refresh token.
 
 Invalida el refresh token del usuario.
 
-**Auth:** Requiere Bearer token
+**Auth:** ✅ Requiere Bearer token
+**Rate limit:** 10 solicitudes por IP cada 15 minutos
 
 **Request body:**
 | Campo | Tipo | Obligatorio |
@@ -241,7 +242,7 @@ Invalida el refresh token del usuario.
 
 #### `POST /api/auth/google`
 
-Inicia sesión o registra un usuario mediante Google OAuth. Recibe el credential token de Google Identity Services.
+Inicia sesión o registra un usuario mediante Google OAuth.
 
 **Rate limit:** 10 solicitudes por IP cada 15 minutos
 
@@ -296,7 +297,7 @@ Inicia sesión o registra un usuario mediante Google OAuth. Recibe el credential
 
 ---
 
-#### `POST /api/family/create`
+#### `POST /api/family`
 
 Crea un grupo familiar. El usuario que crea pasa a ser `family_admin`.
 
@@ -305,21 +306,25 @@ Crea un grupo familiar. El usuario que crea pasa a ser `family_admin`.
 **Request body:**
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
-| `name` | `string` | ✅ | 2-30 caracteres |
+| `name` | `string` | ✅ | 2-50 caracteres |
 
 **Response `201` — Success:**
 ```json
 {
   "ok": true,
   "data": {
-    "family": {
-      "_id": "507f1f77bcf86cd799439012",
-      "name": "Familia García",
-      "adminId": "507f1f77bcf86cd799439011",
-      "members": ["507f1f77bcf86cd799439011"],
-      "inviteCode": "aB3kF9zW",
-      "createdAt": "2026-06-25T14:30:00.000Z"
-    }
+    "_id": "507f1f77bcf86cd799439012",
+    "name": "Familia García",
+    "inviteCode": "aB3kF9zW",
+    "members": [
+      {
+        "userId": "507f1f77bcf86cd799439011",
+        "role": "family_admin",
+        "invitedAt": "2026-06-25T14:30:00.000Z",
+        "acceptedAt": "2026-06-25T14:30:00.000Z"
+      }
+    ],
+    "createdAt": "2026-06-25T14:30:00.000Z"
   },
   "mensaje": "Familia creada correctamente"
 }
@@ -351,13 +356,14 @@ Se une a una familia existente mediante código de invitación.
 {
   "ok": true,
   "data": {
-    "family": {
-      "_id": "507f1f77bcf86cd799439012",
-      "name": "Familia García",
-      "adminId": "507f1f77bcf86cd799439011",
-      "members": ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439013"],
-      "inviteCode": "aB3kF9zW"
-    }
+    "_id": "507f1f77bcf86cd799439012",
+    "name": "Familia García",
+    "inviteCode": "aB3kF9zW",
+    "members": [
+      { "userId": "507f1f77bcf86cd799439011", "role": "family_admin", "invitedAt": "...", "acceptedAt": "..." },
+      { "userId": "507f1f77bcf86cd799439013", "role": "member", "invitedAt": "...", "acceptedAt": "..." }
+    ],
+    "createdAt": "2026-06-25T14:30:00.000Z"
   },
   "mensaje": "Te uniste a la familia correctamente"
 }
@@ -373,91 +379,115 @@ Se une a una familia existente mediante código de invitación.
 
 ---
 
-#### `GET /api/family/members`
+#### `GET /api/family/my`
 
-Obtiene la lista de miembros de la familia del usuario autenticado.
+Obtiene la familia del usuario autenticado con sus miembros.
 
 **Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin`, `member`, `readonly`
 
 **Response `200` — Success:**
 ```json
 {
   "ok": true,
   "data": {
-    "family": {
-      "_id": "507f1f77bcf86cd799439012",
-      "name": "Familia García"
-    },
+    "_id": "507f1f77bcf86cd799439012",
+    "name": "Familia García",
+    "inviteCode": "aB3kF9zW",
     "members": [
       {
-        "userId": {
-          "_id": "507f1f77bcf86cd799439011",
-          "name": "María García",
-          "email": "maria@email.com"
-        },
+        "userId": "507f1f77bcf86cd799439011",
         "role": "family_admin",
-        "joinedAt": "2026-06-25T14:30:00.000Z"
-      },
-      {
-        "userId": {
-          "_id": "507f1f77bcf86cd799439013",
-          "name": "Carlos García",
-          "email": "carlos@email.com"
-        },
-        "role": "member",
-        "joinedAt": "2026-06-25T15:00:00.000Z"
+        "invitedAt": "2026-06-25T14:30:00.000Z",
+        "acceptedAt": "2026-06-25T14:30:00.000Z"
       }
     ],
-    "balance": {
-      "totalIncome": 380000,
-      "totalExpense": 255500,
-      "netBalance": 124500
-    }
+    "createdAt": "2026-06-25T14:30:00.000Z"
   },
-  "mensaje": "Miembros obtenidos correctamente"
+  "mensaje": "Operación exitosa"
 }
 ```
 
 ---
 
-#### `DELETE /api/family/member/:id`
+#### `POST /api/family/invite`
+
+Invita a un usuario por email a unirse a la familia.
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`
+
+**Request body:**
+| Campo | Tipo | Obligatorio | Validación |
+|-------|------|:-----------:|------------|
+| `email` | `string` | ✅ | Email del usuario a invitar |
+| `role` | `string` | ✅ | `member` o `readonly` |
+
+**Response `200` — Success:**
+```json
+{
+  "ok": true,
+  "data": { /* FamilyData */ },
+  "mensaje": "Invitación enviada correctamente"
+}
+```
+
+**Response `404` — Usuario no encontrado:**
+```json
+{
+  "ok": false,
+  "error": "Usuario no encontrado"
+}
+```
+
+---
+
+#### `POST /api/family/respond-invite`
+
+Acepta o rechaza una invitación pendiente.
+
+**Auth:** ✅ Requiere Bearer token
+
+**Request body:**
+| Campo | Tipo | Obligatorio | Validación |
+|-------|------|:-----------:|------------|
+| `inviteId` | `string` | ✅ | ID de la invitación |
+| `accept` | `boolean` | ✅ | true = aceptar, false = rechazar |
+
+**Response `200` — Success:**
+```json
+{
+  "ok": true,
+  "data": { /* FamilyData */ },
+  "mensaje": "Invitación aceptada"
+}
+```
+
+---
+
+#### `DELETE /api/family/:familyId/members/:userId`
 
 Elimina un miembro de la familia.
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`
 
-**Path params:**
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `id` | `string` | ObjectId del miembro a eliminar |
-
 **Response `200` — Success:**
 ```json
 {
   "ok": true,
-  "mensaje": "Miembro eliminado de la familia"
-}
-```
-
-**Response `403` — No autorizado:**
-```json
-{
-  "ok": false,
-  "error": "Solo el administrador puede eliminar miembros"
+  "mensaje": "Miembro eliminado correctamente"
 }
 ```
 
 ---
 
-### 3. Ingresos
+### 3. Ingresos (`/api/finance/incomes`)
 
 > Todos los endpoints de Ingresos requieren autenticación y membresía familiar.
 
 ---
 
-#### `GET /api/incomes`
+#### `GET /api/finance/incomes`
 
 Obtiene los ingresos del grupo familiar, con opción de filtrado.
 
@@ -467,12 +497,8 @@ Obtiene los ingresos del grupo familiar, con opción de filtrado.
 **Query params:**
 | Parámetro | Tipo | Obligatorio | Descripción |
 |-----------|------|:-----------:|-------------|
-| `page` | `number` | ❌ | Default: 1 |
-| `limit` | `number` | ❌ | Default: 20, máximo: 100 |
-| `startDate` | `string` | ❌ | ISO 8601, filtrar desde |
-| `endDate` | `string` | ❌ | ISO 8601, filtrar hasta |
-| `category` | `IncomeCategory` | ❌ | Filtrar por categoría |
-| `userId` | `string` | ❌ | Filtrar por miembro |
+| `startDate` | `string` | ❌ | YYYY-MM-DD, filtrar desde |
+| `endDate` | `string` | ❌ | YYYY-MM-DD, filtrar hasta |
 
 **Response `200` — Success:**
 ```json
@@ -482,24 +508,23 @@ Obtiene los ingresos del grupo familiar, con opción de filtrado.
     {
       "_id": "507f1f77bcf86cd799439020",
       "familyId": "507f1f77bcf86cd799439012",
-      "userId": "507f1f77bcf86cd799439011",
-      "description": "Sueldo de junio",
       "amount": 380000,
       "category": "salary",
-      "date": "2026-06-05T00:00:00.000Z",
+      "description": "Sueldo de junio",
+      "date": "2026-06-05",
+      "isRecurring": false,
+      "createdBy": "507f1f77bcf86cd799439011",
       "createdAt": "2026-06-05T10:30:00.000Z"
     }
   ],
   "total": 1,
-  "page": 1,
-  "limit": 20,
-  "mensaje": "Ingresos obtenidos correctamente"
+  "mensaje": "Operación exitosa"
 }
 ```
 
 ---
 
-#### `POST /api/incomes`
+#### `POST /api/finance/incomes`
 
 Crea un nuevo ingreso.
 
@@ -509,100 +534,42 @@ Crea un nuevo ingreso.
 **Request body:**
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
-| `amount` | `number` | ✅ | > 0, máximo 10 dígitos |
-| `category` | `IncomeCategory` | ✅ | Ver tipos en shared-types |
-| `description` | `string` | ❌ | Máximo 100 caracteres |
-| `date` | `string` | ❌ | ISO 8601, default: now |
-| `userId` | `string` | ❌ | Default: current user (solo family_admin puede asignar a otro) |
+| `amount` | `number` | ✅ | > 0 |
+| `category` | `string` | ✅ | Ver tipos en shared-types |
+| `description` | `string` | ❌ | Máximo 200 caracteres |
+| `date` | `string` | ❌ | YYYY-MM-DD, default: hoy |
+| `isRecurring` | `boolean` | ❌ | Default: false |
 
 **Response `201` — Success:**
 ```json
 {
   "ok": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439020",
-    "familyId": "507f1f77bcf86cd799439012",
-    "userId": "507f1f77bcf86cd799439011",
-    "description": "Sueldo de junio",
-    "amount": 380000,
-    "category": "salary",
-    "date": "2026-06-05T00:00:00.000Z",
-    "createdAt": "2026-06-05T10:30:00.000Z"
-  },
+  "data": { /* IncomeData */ },
   "mensaje": "Ingreso registrado correctamente"
 }
 ```
 
-**Response `400` — Validation error:**
-```json
-{
-  "ok": false,
-  "error": "Error de validación",
-  "detalles": [
-    { "campo": "amount", "mensaje": "El monto debe ser mayor a 0" }
-  ]
-}
-```
+---
+
+#### `PUT /api/finance/incomes/:id`
+#### `DELETE /api/finance/incomes/:id`
+
+Mismas reglas que POST. `family_admin` puede editar/eliminar cualquier ingreso, `member` solo los propios.
 
 ---
 
-#### `PUT /api/incomes/:id`
-
-Actualiza un ingreso existente.
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin` (cualquiera) o `member` (solo propios)
-
-**Request body:** Mismos campos que `POST /api/incomes`, todos opcionales.
-
-**Response `200` — Success:**
-```json
-{
-  "ok": true,
-  "data": { /* IIncome actualizado */ },
-  "mensaje": "Ingreso actualizado correctamente"
-}
-```
-
-**Response `403` — No autorizado (member editando de otro):**
-```json
-{
-  "ok": false,
-  "error": "No podés editar un ingreso que no registraste"
-}
-```
+### 4. Gastos (`/api/finance/expenses`)
 
 ---
 
-#### `DELETE /api/incomes/:id`
-
-Elimina un ingreso.
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin` (cualquiera) o `member` (solo propios)
-
-**Response `200` — Success:**
-```json
-{
-  "ok": true,
-  "mensaje": "Ingreso eliminado correctamente"
-}
-```
-
----
-
-### 4. Gastos
-
----
-
-#### `GET /api/expenses`
+#### `GET /api/finance/expenses`
 
 Obtiene los gastos del grupo familiar.
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`, `member`, `readonly`
 
-**Query params:** Mismos que ingresos (`page`, `limit`, `startDate`, `endDate`, `category`, `userId`).
+**Query params:** Mismos que ingresos (`startDate`, `endDate`).
 
 **Response `200` — Success:**
 ```json
@@ -612,24 +579,24 @@ Obtiene los gastos del grupo familiar.
     {
       "_id": "507f1f77bcf86cd799439030",
       "familyId": "507f1f77bcf86cd799439012",
-      "userId": "507f1f77bcf86cd799439011",
-      "description": "Supermercado",
       "amount": 12500,
       "category": "food",
-      "date": "2026-06-15T00:00:00.000Z",
+      "description": "Supermercado",
+      "date": "2026-06-15",
+      "paymentType": "debit_card",
+      "isEssential": true,
+      "createdBy": "507f1f77bcf86cd799439011",
       "createdAt": "2026-06-15T10:30:00.000Z"
     }
   ],
   "total": 1,
-  "page": 1,
-  "limit": 20,
-  "mensaje": "Gastos obtenidos correctamente"
+  "mensaje": "Operación exitosa"
 }
 ```
 
 ---
 
-#### `POST /api/expenses`
+#### `POST /api/finance/expenses`
 
 Crea un nuevo gasto.
 
@@ -640,36 +607,30 @@ Crea un nuevo gasto.
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
 | `amount` | `number` | ✅ | > 0 |
-| `category` | `ExpenseCategory` | ✅ | Ver tipos en shared-types |
-| `paymentType` | `string` | ✅ | `cash` / `credit_card` / `debit_card` / `transfer` |
-| `description` | `string` | ❌ | Máximo 100 caracteres |
-| `date` | `string` | ❌ | ISO 8601, default: now |
+| `category` | `string` | ✅ | Ver tipos en shared-types |
+| `description` | `string` | ❌ | Máximo 200 caracteres |
+| `date` | `string` | ❌ | YYYY-MM-DD, default: hoy |
+| `paymentType` | `string` | ❌ | `cash`, `credit_card`, `debit_card`, `transfer`. Default: `cash` |
+| `isEssential` | `boolean` | ❌ | Default: false |
 
-**Response `201` — Success:**
-```json
-{
-  "ok": true,
-  "data": { /* IExpense */ },
-  "mensaje": "Gasto registrado correctamente"
-}
-```
+**Response `201` — Success:** Misma estructura que GET.
 
 ---
 
-#### `PUT /api/expenses/:id`
-#### `DELETE /api/expenses/:id`
+#### `PUT /api/finance/expenses/:id`
+#### `DELETE /api/finance/expenses/:id`
 
-Mismas reglas que Ingresos: `family_admin` puede editar/eliminar cualquier gasto, `member` solo los propios.
-
----
-
-### 5. Gastos Fijos (RecurringBills)
+Mismas reglas que Ingresos.
 
 ---
 
-#### `GET /api/recurring-bills`
+### 5. Gastos Fijos / Recurrentes (`/api/finance/recurring-bills`)
 
-Obtiene los gastos fijos del mes actual.
+---
+
+#### `GET /api/finance/recurring-bills`
+
+Obtiene los gastos recurrentes de la familia.
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`, `member`, `readonly`
@@ -684,24 +645,24 @@ Obtiene los gastos fijos del mes actual.
       "familyId": "507f1f77bcf86cd799439012",
       "name": "Alquiler",
       "amount": 45000,
-      "dueDay": 5,
       "category": "rent",
-      "isPaid": false,
-      "paidAt": null,
-      "paidBy": null,
-      "recurring": true,
-      "createdAt": "2026-01-01T00:00:00.000Z"
+      "frequency": "monthly",
+      "nextDueDate": "2026-07-01",
+      "isActive": true,
+      "createdBy": "507f1f77bcf86cd799439011",
+      "createdAt": "2026-01-01T10:00:00.000Z"
     }
   ],
-  "mensaje": "Gastos fijos obtenidos correctamente"
+  "total": 1,
+  "mensaje": "Operación exitosa"
 }
 ```
 
 ---
 
-#### `POST /api/recurring-bills`
+#### `POST /api/finance/recurring-bills`
 
-Crea un nuevo gasto fijo recurrente.
+Crea un nuevo gasto recurrente.
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`, `member`
@@ -709,16 +670,17 @@ Crea un nuevo gasto fijo recurrente.
 **Request body:**
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
-| `name` | `string` | ✅ | 2-50 caracteres |
+| `name` | `string` | ✅ | 2-100 caracteres |
 | `amount` | `number` | ✅ | > 0 |
-| `dueDay` | `number` | ✅ | 1-28 |
-| `category` | `RecurringBillCategory` | ✅ | Ver tipos en shared-types |
+| `category` | `string` | ✅ | Ver tipos en shared-types |
+| `frequency` | `string` | ✅ | `weekly`, `biweekly`, `monthly`, `quarterly`, `yearly` |
+| `nextDueDate` | `string` | ✅ | YYYY-MM-DD |
 
 ---
 
-#### `PATCH /api/recurring-bills/:id/pay`
+#### `PATCH /api/finance/recurring-bills/:id/toggle`
 
-Marca un gasto fijo como pagado.
+Activa o desactiva un gasto recurrente (alterna `isActive`).
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`, `member`
@@ -727,26 +689,21 @@ Marca un gasto fijo como pagado.
 ```json
 {
   "ok": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439040",
-    "isPaid": true,
-    "paidAt": "2026-06-05T10:00:00.000Z",
-    "paidBy": "507f1f77bcf86cd799439011"
-  },
-  "mensaje": "Gasto fijo marcado como pagado"
+  "data": { /* RecurringBillData actualizado */ },
+  "mensaje": "Estado actualizado correctamente"
 }
 ```
 
 ---
 
-#### `PUT /api/recurring-bills/:id`
-#### `DELETE /api/recurring-bills/:id`
+#### `PUT /api/finance/recurring-bills/:id`
+#### `DELETE /api/finance/recurring-bills/:id`
 
-Actualiza o elimina un gasto fijo.
+Actualiza o elimina un gasto recurrente.
 
 ---
 
-### 6. Deudas
+### 6. Deudas (`/api/debts`)
 
 ---
 
@@ -760,9 +717,7 @@ Obtiene las deudas del grupo familiar.
 **Query params:**
 | Parámetro | Tipo | Descripción |
 |-----------|------|-------------|
-| `status` | `string` | `active` / `paid` / `all` (default: `active`) |
-| `page` | `number` | Default: 1 |
-| `limit` | `number` | Default: 20 |
+| `isPaid` | `string` | `"true"` o `"false"`. Filtra por estado |
 
 **Response `200` — Success:**
 ```json
@@ -772,19 +727,24 @@ Obtiene las deudas del grupo familiar.
     {
       "_id": "507f1f77bcf86cd799439050",
       "familyId": "507f1f77bcf86cd799439012",
-      "name": "Préstamo banco",
-      "direction": "i_owe",
-      "type": "credit",
+      "type": "debtor",
+      "personName": "Carlos",
       "totalAmount": 85000,
-      "remainingAmount": 39000,
-      "installments": 12,
-      "installmentAmount": 7083,
-      "dueDay": 15,
-      "interestRate": 3.5,
-      "payments": ["507f1f77bcf86cd799439051"]
+      "description": "Préstamo personal",
+      "dueDate": "2026-12-31",
+      "isPaid": false,
+      "paidAmount": 46000,
+      "progress": 54,
+      "payments": [
+        { "id": "0", "amount": 10000, "date": "2026-01-15", "description": "Pago 1" },
+        { "id": "1", "amount": 36000, "date": "2026-06-15", "description": "Pago 2" }
+      ],
+      "createdBy": "507f1f77bcf86cd799439011",
+      "createdAt": "2026-01-01T10:00:00.000Z"
     }
   ],
-  "mensaje": "Deudas obtenidas correctamente"
+  "total": 1,
+  "mensaje": "Operación exitosa"
 }
 ```
 
@@ -800,36 +760,15 @@ Crea una nueva deuda.
 **Request body:**
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
-| `name` | `string` | ✅ | 2-50 caracteres |
-| `direction` | `string` | ✅ | `i_owe` / `they_owe_me` |
-| `type` | `string` | ✅ | `fixed` / `credit` |
+| `type` | `string` | ✅ | `creditor` (me deben) o `debtor` (debo) |
+| `personName` | `string` | ✅ | 2-100 caracteres |
 | `totalAmount` | `number` | ✅ | > 0 |
-| `installments` | `number` | ✅ | 1-36 |
-| `dueDay` | `number` | ✅ | 1-28 |
-| `interestRate` | `number` | ❌ | Obligatorio si type = `credit` |
 | `description` | `string` | ❌ | Máximo 200 caracteres |
-
-**Response `201` — Success:**
-```json
-{
-  "ok": true,
-  "data": { /* IDebt */ },
-  "mensaje": "Deuda registrada correctamente"
-}
-```
+| `dueDate` | `string` | ❌ | YYYY-MM-DD |
 
 ---
 
-#### `PUT /api/debts/:id`
-
-Actualiza una deuda existente.
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin` (cualquiera) o `member` (solo propias)
-
----
-
-#### `POST /api/debts/:id/payment`
+#### `POST /api/debts/:id/payments`
 
 Registra un pago a una deuda.
 
@@ -839,48 +778,31 @@ Registra un pago a una deuda.
 **Request body:**
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
-| `amount` | `number` | ✅ | > 0, <= remainingAmount |
-| `date` | `string` | ❌ | ISO 8601, default: now |
-| `description` | `string` | ❌ | Ej: "Pago cuota 5/12" |
+| `amount` | `number` | ✅ | > 0 |
+| `date` | `string` | ✅ | YYYY-MM-DD |
+| `description` | `string` | ❌ | Máximo 200 caracteres |
 
-**Response `201` — Success:**
+**Response `200` — Success:**
 ```json
 {
   "ok": true,
-  "data": {
-    "payment": { /* IPayment */ },
-    "remainingAmount": 31917,
-    "progress": 62
-  },
+  "data": { /* DebtData actualizada con progreso */ },
   "mensaje": "Pago registrado correctamente"
 }
 ```
 
 ---
 
-#### `GET /api/debts/:id/history`
+#### `PUT /api/debts/:id`
+#### `PUT /api/debts/:id/payments/:paymentIndex`
+#### `DELETE /api/debts/:id`
+#### `DELETE /api/debts/:id/payments/:paymentIndex`
 
-Obtiene el detalle completo de una deuda con su historial de pagos.
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin`, `member`, `readonly`
-
-**Response `200` — Success:**
-```json
-{
-  "ok": true,
-  "data": {
-    "debt": { /* IDebt */ },
-    "payments": [ /* IPayment[] */ ],
-    "progress": 54
-  },
-  "mensaje": "Detalle de deuda obtenido correctamente"
-}
-```
+Actualiza/elimina deudas y pagos embebidos.
 
 ---
 
-### 7. Ahorros
+### 7. Ahorros (`/api/savings`)
 
 ---
 
@@ -902,18 +824,18 @@ Obtiene las metas de ahorro del grupo familiar.
       "name": "Viaje a la costa",
       "targetAmount": 120000,
       "currentAmount": 45000,
-      "color": "#C99A0A",
-      "emoji": "🏖️",
-      "deadline": "2026-12-31T00:00:00.000Z",
-      "autoSave": true,
-      "autoSaveAmount": 5000,
-      "autoSaveDay": 1,
+      "deadline": "2026-12-31",
+      "description": "Ahorro para vacaciones",
+      "progress": 37,
       "contributions": [
-        { "amount": 5000, "userId": "507f1f77bcf86cd799439011", "date": "2026-06-01T00:00:00.000Z" }
-      ]
+        { "id": "0", "amount": 5000, "date": "2026-06-01" }
+      ],
+      "createdBy": "507f1f77bcf86cd799439011",
+      "createdAt": "2026-01-01T10:00:00.000Z"
     }
   ],
-  "mensaje": "Metas de ahorro obtenidas correctamente"
+  "total": 1,
+  "mensaje": "Operación exitosa"
 }
 ```
 
@@ -929,18 +851,14 @@ Crea una nueva meta de ahorro.
 **Request body:**
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
-| `name` | `string` | ✅ | 2-40 caracteres |
+| `name` | `string` | ✅ | 2-100 caracteres |
 | `targetAmount` | `number` | ✅ | > 0 |
-| `emoji` | `string` | ❌ | Default: "🏖️" |
-| `color` | `string` | ❌ | Default: "#C99A0A". Valores: `#C99A0A`, `#15C48C`, `#5B8DEF`, `#9B6EF3`, `#E05252`, `#E4B3E9` |
-| `deadline` | `string` | ❌ | ISO 8601 |
-| `autoSave` | `boolean` | ❌ | Default: false |
-| `autoSaveAmount` | `number` | ❌ | Obligatorio si autoSave = true |
-| `autoSaveDay` | `number` | ❌ | 1-28, obligatorio si autoSave = true |
+| `deadline` | `string` | ✅ | YYYY-MM-DD |
+| `description` | `string` | ❌ | Máximo 200 caracteres |
 
 ---
 
-#### `POST /api/savings/:id/contribute`
+#### `POST /api/savings/:id/contributions`
 
 Aporta dinero a una meta de ahorro.
 
@@ -951,43 +869,52 @@ Aporta dinero a una meta de ahorro.
 | Campo | Tipo | Obligatorio | Validación |
 |-------|------|:-----------:|------------|
 | `amount` | `number` | ✅ | > 0 |
-| `date` | `string` | ❌ | ISO 8601, default: now |
+| `date` | `string` | ✅ | YYYY-MM-DD |
+
+---
+
+#### `PUT /api/savings/:id`
+#### `DELETE /api/savings/:id`
+#### `DELETE /api/savings/:id/contributions/:contributionIndex`
+
+---
+
+### 8. Dashboard (`/api/dashboard`)
+
+#### `GET /api/dashboard`
+
+Obtiene el resumen financiero del mes actual para la familia.
+
+**Auth:** ✅ Requiere Bearer token
 
 **Response `200` — Success:**
 ```json
 {
   "ok": true,
   "data": {
-    "contribution": {
-      "amount": 5000,
-      "userId": "507f1f77bcf86cd799439011",
-      "date": "2026-06-01T00:00:00.000Z"
-    },
-    "currentAmount": 50000,
-    "progress": 42
+    "totalIncomes": 380000,
+    "totalExpenses": 255500,
+    "balance": 124500,
+    "semaforo": "verde",
+    "pendingDebts": 2,
+    "activeSavings": 1,
+    "recurringBills": 3,
+    "recentIncomes": [],
+    "recentExpenses": []
   },
-  "mensaje": "Aporte registrado correctamente"
+  "mensaje": "Operación exitosa"
 }
 ```
 
----
-
-#### `DELETE /api/savings/:id`
-
-Elimina una meta de ahorro.
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin` (cualquiera) o `member` (solo propias)
+`semaforo` indica salud financiera: `verde` (balance > 20% ingresos), `amarillo`, `rojo` (balance negativo).
 
 ---
 
-### 8. Checklist Mensual
-
----
+### 9. Checklist (`/api/checklist`)
 
 #### `GET /api/checklist`
 
-Obtiene el checklist del mes actual.
+Obtiene el checklist del mes. Si no existe, se crea con items por defecto.
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`, `member`, `readonly`
@@ -1002,42 +929,27 @@ Obtiene el checklist del mes actual.
 {
   "ok": true,
   "data": {
-    "items": [ /* IChecklistItem[] */ ],
-    "summary": {
-      "total": 8,
-      "completed": 5,
-      "percentage": 62,
-      "month": "2026-06",
-      "streak": 4
-    }
+    "_id": "507f1f77bcf86cd799439070",
+    "familyId": "507f1f77bcf86cd799439012",
+    "month": "2026-06",
+    "items": [
+      { "_id": "...", "label": "Pagar todas las deudas del mes", "completed": false, "completedBy": null, "completedAt": null },
+      { "_id": "...", "label": "Actualizar ingresos del mes", "completed": true, "completedBy": "userId", "completedAt": "2026-06-15T10:00:00.000Z" }
+    ],
+    "createdAt": "...",
+    "updatedAt": "..."
   },
-  "mensaje": "Checklist obtenido correctamente"
+  "mensaje": "Operación exitosa"
 }
 ```
 
----
-
-#### `POST /api/checklist`
-
-Agrega una tarea personalizada al checklist.
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin`, `member`
-
-**Request body:**
-| Campo | Tipo | Obligatorio | Validación |
-|-------|------|:-----------:|------------|
-| `name` | `string` | ✅ | 2-60 caracteres |
-| `dueDay` | `number` | ✅ | 1-31 |
-| `amount` | `number` | ❌ | Monto asociado |
-| `category` | `string` | ❌ | Máximo 30 caracteres |
-| `assignedTo` | `string` | ❌ | userId |
+Items por defecto: Pagar deudas, Actualizar ingresos, Revisar gastos recurrentes, Actualizar ahorros, Cerrar resumen mensual.
 
 ---
 
-#### `PATCH /api/checklist/:id/toggle`
+#### `PATCH /api/checklist/:month/items/:itemId`
 
-Marca o desmarca una tarea del checklist.
+Marca o desmarca un item del checklist.
 
 **Auth:** ✅ Requiere Bearer token
 **Roles:** `family_admin`, `member`
@@ -1046,43 +958,20 @@ Marca o desmarca una tarea del checklist.
 ```json
 {
   "ok": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439070",
-    "isCompleted": true,
-    "completedAt": "2026-06-15T10:00:00.000Z",
-    "completedBy": "507f1f77bcf86cd799439011"
-  },
-  "mensaje": "Tarea actualizada"
+  "data": { /* IChecklistDocument actualizado */ },
+  "mensaje": "Item actualizado correctamente"
 }
 ```
 
 ---
 
-#### `DELETE /api/checklist/:id`
-
-Elimina una tarea personalizada (no las recurrentes del sistema).
-
-**Auth:** ✅ Requiere Bearer token
-**Roles:** `family_admin`, `member`
-
----
-
-### 9. Notificaciones
-
----
+### 10. Notificaciones (`/api/notifications`)
 
 #### `GET /api/notifications`
 
 Obtiene las notificaciones del usuario autenticado.
 
 **Auth:** ✅ Requiere Bearer token
-
-**Query params:**
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `page` | `number` | Default: 1 |
-| `limit` | `number` | Default: 20 |
-| `unreadOnly` | `boolean` | Default: false |
 
 **Response `200` — Success:**
 ```json
@@ -1092,34 +981,35 @@ Obtiene las notificaciones del usuario autenticado.
     {
       "_id": "507f1f77bcf86cd799439080",
       "userId": "507f1f77bcf86cd799439011",
-      "type": "new_expense",
-      "title": "María agregó un gasto",
-      "body": "$ 3.500 en Comidas",
-      "data": { "expenseId": "507f1f77bcf86cd799439030" },
+      "type": "reminder",
+      "title": "Vence hoy",
+      "body": "Hoy vence Alquiler — $45000",
+      "data": { "billId": "507f1f77bcf86cd799439040", "amount": 45000 },
       "isRead": false,
-      "createdAt": "2026-06-15T10:30:00.000Z"
+      "createdAt": "2026-06-15T08:00:00.000Z"
     }
   ],
   "total": 1,
-  "page": 1,
-  "limit": 20,
-  "mensaje": "Notificaciones obtenidas correctamente"
+  "mensaje": "Operación exitosa"
 }
 ```
 
+**Tipos de notificación:** `new_expense`, `new_income`, `debt_paid`, `goal_reached`, `invitation`, `reminder`, `checklist`, `new_member`
+
 ---
 
-#### `PATCH /api/notifications/read`
+#### `GET /api/notifications/unread-count`
 
-Marca todas las notificaciones como leídas.
+Obtiene la cantidad de notificaciones no leídas.
 
 **Auth:** ✅ Requiere Bearer token
 
-**Response `200` — Success:**
+**Response `200`:**
 ```json
 {
   "ok": true,
-  "mensaje": "Todas las notificaciones marcadas como leídas"
+  "data": { "count": 3 },
+  "mensaje": "Operación exitosa"
 }
 ```
 
@@ -1131,7 +1021,7 @@ Marca una notificación específica como leída.
 
 **Auth:** ✅ Requiere Bearer token
 
-**Response `200` — Success:**
+**Response `200`:**
 ```json
 {
   "ok": true,
@@ -1141,13 +1031,28 @@ Marca una notificación específica como leída.
 
 ---
 
+#### `PATCH /api/notifications/read-all`
+
+Marca todas las notificaciones como leídas.
+
+**Auth:** ✅ Requiere Bearer token
+
+**Response `200`:**
+```json
+{
+  "ok": true,
+  "mensaje": "Todas las notificaciones marcadas como leídas"
+}
+```
+
+---
+
 ## Resumen de middlewares
 
 | Middleware | Descripción | Se aplica en |
 |-----------|-------------|-------------|
-| `rateLimit` | 10 req/15 min por IP | Rutas de auth (register, login) |
+| `authRateLimit` | 10 req/15 min por IP | Todas las rutas de auth |
 | `authMiddleware` | Verifica JWT Bearer token | Todas las rutas protegidas |
 | `validate(schema)` | Valida body con Zod | Todos los POST/PUT/PATCH |
-| `requireFamilyRole(...)` | Verifica rol dentro de la familia | Rutas que requieren membresía |
-| `requirePlatformRole(...)` | Verifica rol de plataforma | Rutas de admin/soporte |
+| `requireFamilyRole(...)` | Verifica rol dentro de la familia | Rutas que requieren membresía (mutaciones) |
 | `errorMiddleware` | Manejo global de errores | Todas las rutas |

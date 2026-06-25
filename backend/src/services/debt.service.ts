@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose'
 import { DebtModel, IDebtDocument } from '../models/Debt.model'
 import {
   CreateDebtRequest, UpdateDebtRequest,
@@ -38,9 +39,9 @@ export async function create(data: CreateDebtRequest, familyId: string, userId: 
   return toDebtData(doc)
 }
 
-export async function getAll(familyId: string, filter?: { isPaid?: boolean }): Promise<DebtData[]> {
-  const query: any = { familyId }
-  if (filter?.isPaid !== undefined) query.isPaid = filter.isPaid
+export async function getAll(familyId: string, isPaid?: string): Promise<DebtData[]> {
+  const query: FilterQuery<IDebtDocument> = { familyId }
+  if (isPaid !== undefined) query.isPaid = isPaid === 'true'
   const docs = await DebtModel.find(query).sort({ createdAt: -1 })
   return docs.map(toDebtData)
 }

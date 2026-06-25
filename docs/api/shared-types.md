@@ -3,6 +3,7 @@
 > Documentación centralizada de todas las interfaces y tipos utilizados
 > tanto en el backend como en el frontend.
 > Archivo fuente: `shared/types/` (cada dominio en su propio archivo).
+> La API devuelve tipos `*Data` (DTOs de respuesta). Los `I*` son interfaces conceptuales completas.
 
 ---
 
@@ -12,21 +13,17 @@
 |----------|-----------|---------|
 | Interfaces | PascalCase con prefijo `I` | `IUser`, `IDebt` |
 | Tipos (uniones) | PascalCase | `PlatformRole`, `FamilyRole` |
-| DTOs de request | PascalCase con sufijo `Request` | `ICreateIncomeRequest` |
-| DTOs de response | PascalCase con sufijo `Response` | `ILoginResponse` |
-| Archivos | kebab-case con sufijo `.types.ts` | `user.types.ts`, `debt.types.ts` |
+| DTOs de respuesta | PascalCase con sufijo `Data` | `IncomeData`, `FamilyData` |
+| DTOs de request | PascalCase con sufijo `Request` | `CreateIncomeRequest` |
+| Archivos | kebab-case con sufijo `.types.ts` | `auth.types.ts`, `debt.types.ts` |
 
 ---
 
 ## 1. Auth (`shared/types/auth.types.ts`)
 
 ```typescript
-// ─── Enums / Unions ────────────────────────────────
-
 export type PlatformRole = 'superadmin' | 'agent' | 'user'
 export type FamilyRole = 'family_admin' | 'member' | 'readonly'
-
-// ─── Interfaces ────────────────────────────────────
 
 export interface IUser {
   _id: string
@@ -50,7 +47,7 @@ export interface IUserPublic {
   familyId: string | null
   familyRole: FamilyRole | null
   isActive: boolean
-  createdAt: Date
+  createdAt: string
 }
 
 // ─── Auth DTOs ──────────────────────────────────────
@@ -79,11 +76,7 @@ export interface ILoginResponse {
 }
 
 export interface IGoogleLoginRequest {
-  credential: string            // token de ID de Google (JWT firmado por Google)
-}
-
-export interface IRefreshTokenRequest {
-  refreshToken: string
+  credential: string
 }
 
 export interface IRefreshTokenResponse {
@@ -111,7 +104,7 @@ export interface IFamily {
 }
 
 export interface ICreateFamilyRequest {
-  name: string                  // 2-30 caracteres
+  name: string                  // 2-50 caracteres
 }
 
 export interface ICreateFamilyResponse {
@@ -125,17 +118,24 @@ export interface IJoinFamilyRequest {
 export interface IMember {
   userId: IUserPublic
   role: FamilyRole
-  joinedAt: Date
+  joinedAt: string
 }
 
-export interface IFamilyDetail {
-  family: IFamily
-  members: IMember[]
-  balance: {
-    totalIncome: number
-    totalExpense: number
-    netBalance: number
-  }
+// ─── DTOs de respuesta ──────────────────────────────
+
+export interface FamilyMember {
+  userId: string
+  role: 'family_admin' | 'member' | 'readonly'
+  invitedAt: string
+  acceptedAt: string | null
+}
+
+export interface FamilyData {
+  _id: string
+  name: string
+  inviteCode: string
+  members: FamilyMember[]
+  createdAt: string
 }
 ```
 
@@ -145,41 +145,39 @@ export interface IFamilyDetail {
 
 ```typescript
 export type IncomeCategory =
-  | 'salary'
-  | 'freelance'
-  | 'investment'
-  | 'sale'
-  | 'family'
-  | 'loan'
-  | 'refund'
-  | 'other'
+  | 'salary' | 'freelance' | 'investment' | 'sale'
+  | 'family' | 'loan' | 'refund' | 'other'
 
 export interface IIncome {
   _id: string
   familyId: string
   userId: string
   description: string
-  amount: number                // siempre en enteros (centavos: $15000 = 15000)
+  amount: number
   category: IncomeCategory
-  date: string                  // ISO 8601: "2026-06-15T10:30:00.000Z"
+  date: string                  // "2026-06-15"
   createdAt: string
 }
 
-export interface ICreateIncomeRequest {
-  description?: string          // opcional, máximo 100 caracteres
-  amount: number                // > 0
-  category: IncomeCategory
-  date?: string                 // opcional, default: now
-  userId?: string               // opcional, default: current user (solo family_admin)
+// ─── DTOs ───────────────────────────────────────────
+
+export interface IncomeData {
+  _id: string
+  familyId: string
+  amount: number
+  category: string
+  description: string
+  date: string
+  isRecurring: boolean
+  createdBy: string
+  createdAt: string
 }
 
-export interface IUpdateIncomeRequest {
-  description?: string
-  amount?: number
-  category?: IncomeCategory
-  date?: string
-}
+export type CreateIncomeRequest = Omit<IncomeData, '_id' | 'familyId' | 'createdBy' | 'createdAt'>
+export type UpdateIncomeRequest = Partial<CreateIncomeRequest>
 ```
+
+> Nota: `IIncome` usa `userId`, `IncomeData` usa `createdBy`. La API devuelve `IncomeData`.
 
 ---
 
@@ -187,14 +185,10 @@ export interface IUpdateIncomeRequest {
 
 ```typescript
 export type ExpenseCategory =
-  | 'food'
-  | 'transport'
-  | 'utilities'
-  | 'rent'
-  | 'health'
-  | 'education'
-  | 'entertainment'
-  | 'other'
+  | 'food' | 'transport' | 'utilities' | 'rent'
+  | 'health' | 'education' | 'entertainment' | 'other'
+
+export type PaymentType = 'cash' | 'credit_card' | 'debit_card' | 'transfer'
 
 export interface IExpense {
   _id: string
@@ -207,22 +201,23 @@ export interface IExpense {
   createdAt: string
 }
 
-export interface ICreateExpenseRequest {
-  description?: string
-  amount: number                // > 0
-  category: ExpenseCategory
-  paymentType: 'cash' | 'credit_card' | 'debit_card' | 'transfer'
-  date?: string
-  userId?: string               // opcional, default: current user
+// ─── DTOs ───────────────────────────────────────────
+
+export interface ExpenseData {
+  _id: string
+  familyId: string
+  amount: number
+  category: string
+  description: string
+  date: string
+  paymentType: PaymentType
+  isEssential: boolean
+  createdBy: string
+  createdAt: string
 }
 
-export interface IUpdateExpenseRequest {
-  description?: string
-  amount?: number
-  category?: ExpenseCategory
-  paymentType?: 'cash' | 'credit_card' | 'debit_card' | 'transfer'
-  date?: string
-}
+export type CreateExpenseRequest = Omit<ExpenseData, '_id' | 'familyId' | 'createdBy' | 'createdAt'>
+export type UpdateExpenseRequest = Partial<CreateExpenseRequest>
 ```
 
 ---
@@ -231,43 +226,45 @@ export interface IUpdateExpenseRequest {
 
 ```typescript
 export type RecurringBillCategory =
-  | 'rent'
-  | 'electricity'
-  | 'water'
-  | 'gas'
-  | 'internet'
-  | 'insurance'
-  | 'subscription'
-  | 'other'
+  | 'rent' | 'electricity' | 'water' | 'gas'
+  | 'internet' | 'insurance' | 'subscription' | 'other'
+
+export type BillFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
 
 export interface IRecurringBill {
   _id: string
   familyId: string
   name: string
   amount: number
-  dueDay: number                // 1-28, día del mes
+  dueDay: number                // 1-28 (modelo conceptual)
   category: RecurringBillCategory
   isPaid: boolean
   paidAt: string | null
-  paidBy: string | null         // userId
+  paidBy: string | null
   recurring: true
   createdAt: string
 }
 
-export interface ICreateRecurringBillRequest {
-  name: string                  // 2-50 caracteres
-  amount: number                // > 0
-  dueDay: number                // 1-28
-  category: RecurringBillCategory
+// ─── DTOs (lo que realmente devuelve la API) ────────
+
+export interface RecurringBillData {
+  _id: string
+  familyId: string
+  name: string
+  amount: number
+  category: string
+  frequency: BillFrequency       // weekly, biweekly, monthly, quarterly, yearly
+  nextDueDate: string            // YYYY-MM-DD
+  isActive: boolean              // true = activo, false = pausado
+  createdBy: string
+  createdAt: string
 }
 
-export interface IUpdateRecurringBillRequest {
-  name?: string
-  amount?: number
-  dueDay?: number
-  category?: RecurringBillCategory
-}
+export type CreateRecurringBillRequest = Omit<RecurringBillData, '_id' | 'familyId' | 'createdBy' | 'createdAt'>
+export type UpdateRecurringBillRequest = Partial<CreateRecurringBillRequest>
 ```
+
+> La implementación real usa `frequency` + `nextDueDate` en lugar de `dueDay` + `isPaid`. El cron job avanza `nextDueDate` automáticamente según la frecuencia.
 
 ---
 
@@ -276,16 +273,6 @@ export interface IUpdateRecurringBillRequest {
 ```typescript
 export type DebtType = 'fixed' | 'credit'
 export type DebtDirection = 'i_owe' | 'they_owe_me'
-
-export interface IPayment {
-  _id: string
-  debtId: string
-  userId: string
-  amount: number
-  date: string
-  description: string
-  createdAt: string
-}
 
 export interface IDebt {
   _id: string
@@ -297,49 +284,62 @@ export interface IDebt {
   remainingAmount: number
   installments: number
   installmentAmount: number
-  dueDay: number                // 1-28
-  interestRate?: number         // solo si type = 'credit', porcentaje mensual
+  dueDay: number
+  interestRate?: number
   description?: string
   payments: string[]            // array de ObjectIds de pagos
   createdAt: string
 }
 
-export interface ICreateDebtRequest {
-  name: string
-  direction: DebtDirection
-  type: DebtType
-  totalAmount: number
-  installments: number          // 1-36
-  dueDay: number                // 1-28
-  interestRate?: number         // obligatorio si type = 'credit'
-  description?: string
-}
+// ─── DTOs (lo que realmente devuelve la API) ────────
 
-export interface IRegisterPaymentRequest {
+export interface PaymentData {
+  id: string
   amount: number
-  date?: string
-  description?: string
+  date: string
+  description: string
 }
 
-export interface IDebtDetail {
-  debt: IDebt
-  payments: IPayment[]
+export interface DebtData {
+  _id: string
+  familyId: string
+  type: 'creditor' | 'debtor'   // creditor = me deben, debtor = debo
+  personName: string
+  totalAmount: number
+  description: string
+  dueDate: string               // YYYY-MM-DD
+  isPaid: boolean
+  paidAmount: number
   progress: number              // 0-100 (porcentaje pagado)
+  payments: PaymentData[]       // pagos embebidos
+  createdBy: string
+  createdAt: string
+}
+
+export interface CreateDebtRequest {
+  type: 'creditor' | 'debtor'
+  personName: string
+  totalAmount: number
+  description?: string
+  dueDate?: string
+}
+
+export interface CreatePaymentRequest {
+  amount: number
+  date: string
+  description?: string
 }
 ```
+
+> La implementación real simplifica el modelo de deuda: sin cuotas ni interés, con pagos embebidos. `IDebt` es el modelo conceptual completo.
 
 ---
 
 ## 7. Saving (`shared/types/saving.types.ts`)
 
 ```typescript
-export type SavingColor = '#C99A0A' | '#15C48C' | '#5B8DEF' | '#9B6EF3' | '#E05252' | '#E4B3E9'
-
-export interface ISavingContribution {
-  amount: number
-  userId: string
-  date: string
-}
+export type SavingColor =
+  | '#C99A0A' | '#15C48C' | '#5B8DEF' | '#9B6EF3' | '#E05252' | '#E4B3E9'
 
 export interface ISaving {
   _id: string
@@ -352,27 +352,47 @@ export interface ISaving {
   deadline: string | null
   autoSave: boolean
   autoSaveAmount: number | null
-  autoSaveDay: number | null    // 1-28
+  autoSaveDay: number | null
   contributions: ISavingContribution[]
   createdAt: string
 }
 
-export interface ICreateSavingRequest {
-  name: string
-  targetAmount: number
-  emoji?: string                // default: "🏖️"
-  color?: SavingColor           // default: "#C99A0A"
-  deadline?: string             // ISO 8601
-  autoSave?: boolean
-  autoSaveAmount?: number       // obligatorio si autoSave = true
-  autoSaveDay?: number          // 1-28, obligatorio si autoSave = true
+// ─── DTOs (lo que realmente devuelve la API) ────────
+
+export interface ContributionData {
+  id: string
+  amount: number
+  date: string
 }
 
-export interface IContributeRequest {
+export interface SavingData {
+  _id: string
+  familyId: string
+  name: string
+  targetAmount: number
+  currentAmount: number
+  deadline: string
+  description: string
+  progress: number              // 0-100
+  contributions: ContributionData[]
+  createdBy: string
+  createdAt: string
+}
+
+export interface CreateSavingRequest {
+  name: string
+  targetAmount: number
+  deadline: string
+  description?: string
+}
+
+export interface AddContributionRequest {
   amount: number
-  date?: string
+  date: string
 }
 ```
+
+> La implementación real no incluye `color`, `emoji`, `autoSave` aún — están en el roadmap.
 
 ---
 
@@ -384,23 +404,15 @@ export interface IChecklistItem {
   familyId: string
   name: string
   amount?: number
-  dueDay: number                // 1-31
-  category?: string
-  assignedTo?: string           // userId
-  isCompleted: boolean
-  completedAt: string | null
-  completedBy: string | null    // userId
-  month: string                 // "2026-06" (YYYY-MM)
-  isRecurring: boolean          // si es predefinido o creado por el usuario
-  createdAt: string
-}
-
-export interface ICreateChecklistItemRequest {
-  name: string
-  amount?: number
   dueDay: number
   category?: string
   assignedTo?: string
+  isCompleted: boolean
+  completedAt: string | null
+  completedBy: string | null
+  month: string
+  isRecurring: boolean
+  createdAt: string
 }
 
 export interface IChecklistSummary {
@@ -408,9 +420,16 @@ export interface IChecklistSummary {
   completed: number
   percentage: number
   month: string
-  streak: number                // meses consecutivos completados
+  streak: number
+}
+
+export interface IChecklistResponse {
+  items: IChecklistItem[]
+  summary: IChecklistSummary
 }
 ```
+
+> La implementación actual es más simple: items agrupados por mes en un solo documento, con `label`/`completed`/`completedBy`/`completedAt`. El modelo `IChecklistItem` es para una futura versión con items individuales.
 
 ---
 
@@ -418,59 +437,45 @@ export interface IChecklistSummary {
 
 ```typescript
 export type NotificationType =
-  | 'new_expense'
-  | 'new_income'
-  | 'debt_paid'
-  | 'goal_reached'
-  | 'invitation'
-  | 'reminder'
-  | 'checklist'
-  | 'new_member'
+  | 'new_expense' | 'new_income' | 'debt_paid' | 'goal_reached'
+  | 'invitation' | 'reminder' | 'checklist' | 'new_member'
 
 export interface INotification {
   _id: string
   userId: string
   type: NotificationType
   title: string
-  body: string
-  data: Record<string, unknown>  // payload para navegación
+  body: string                  // campo `body` en lugar de `message`
+  data: Record<string, unknown>
   isRead: boolean
   createdAt: string
 }
 ```
 
+> La implementación real coincide con `INotification`. Disponibles 8 tipos de notificación.
+
 ---
 
-## 10. Responses genéricas (`shared/types/response.types.ts`)
+## 10. Respuestas genéricas (`shared/types/response.types.ts`)
 
 ```typescript
-// ─── Respuesta exitosa con datos ───────────────────
-
 export interface ApiSuccessResponse<T> {
   ok: true
   data: T
   mensaje: string
 }
 
-// ─── Respuesta exitosa sin datos (DELETE, etc.) ────
-
 export interface ApiSuccessEmptyResponse {
   ok: true
   mensaje: string
 }
 
-// ─── Respuesta paginada ────────────────────────────
-
 export interface ApiPaginatedResponse<T> {
   ok: true
   data: T[]
   total: number
-  page: number
-  limit: number
   mensaje: string
 }
-
-// ─── Respuesta de error ────────────────────────────
 
 export interface ApiErrorResponse {
   ok: false

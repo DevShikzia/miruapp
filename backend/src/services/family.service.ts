@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { FamilyModel, IFamilyDocument } from '../models/Family.model'
 import { UserModel } from '../models/User.model'
 import { ICreateFamilyRequest, FamilyData } from '@shared/types/family.types'
@@ -9,10 +10,16 @@ import {
   BadRequestError,
 } from '../utils/errors'
 
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  return Array.from(crypto.randomBytes(8)).map(b => chars[b % 62]).join('')
+}
+
 function toFamilyData(family: IFamilyDocument): FamilyData {
   return {
     _id: family._id.toString(),
     name: family.name,
+    inviteCode: family.inviteCode,
     members: family.members.map((m) => ({
       userId: m.userId,
       role: m.role as 'family_admin' | 'member' | 'readonly',
@@ -27,8 +34,14 @@ export async function createFamily(data: ICreateFamilyRequest, creator: IUserPub
   const isInFamily = await FamilyModel.findOne({ 'members.userId': creator._id, 'members.acceptedAt': { $ne: null } })
   if (isInFamily) throw new ConflictError('Ya pertenecés a una familia')
 
+  let inviteCode = generateInviteCode()
+  while (await FamilyModel.findOne({ inviteCode })) {
+    inviteCode = generateInviteCode()
+  }
+
   const family = await FamilyModel.create({
     name: data.name.trim(),
+    inviteCode,
     members: [{
       userId: creator._id,
       role: 'family_admin',
@@ -88,6 +101,38 @@ export async function respondInvite(userId: string, _inviteId: string, accept: b
     family.members = family.members.filter((m) => m.userId !== userId)
     await family.save()
   }
+
+  return toFamilyData(family)
+}
+
+export async function joinByCode(inviteCode: string, user: IUserPublic): Promise<FamilyData> {
+  const family = await FamilyModel.findOne({ inviteCode })
+  if (!family) throw new NotFoundError('Código de invitación inválido')
+
+  const existing = family.members.find((m) => m.userId === user._id)
+  if (existing) {
+    if (existing.acceptedAt) throw new ConflictError('Ya sos miembro de esta familia')
+    existing.acceptedAt = new Date()
+    await family.save()
+    await UserModel.findByIdAndUpdate(user._id, {
+      familyId: family._id.toString(),
+      familyRole: existing.role,
+    })
+    return toFamilyData(family)
+  }
+
+  family.members.push({
+    userId: user._id,
+    role: 'member',
+    invitedAt: new Date(),
+    acceptedAt: new Date(),
+  })
+  await family.save()
+
+  await UserModel.findByIdAndUpdate(user._id, {
+    familyId: family._id.toString(),
+    familyRole: 'member',
+  })
 
   return toFamilyData(family)
 }

@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose'
 import { ExpenseModel, IExpenseDocument } from '../models/Expense.model'
 import { CreateExpenseRequest, UpdateExpenseRequest, ExpenseData } from '@shared/types/expense.types'
 import { NotFoundError } from '../utils/errors'
@@ -10,6 +11,7 @@ function toData(doc: IExpenseDocument): ExpenseData {
     category: doc.category,
     description: doc.description,
     date: doc.date,
+    paymentType: doc.paymentType,
     isEssential: doc.isEssential,
     createdBy: doc.createdBy,
     createdAt: doc.createdAt.toISOString(),
@@ -22,7 +24,7 @@ export async function create(data: CreateExpenseRequest, familyId: string, userI
 }
 
 export async function getAll(familyId: string, startDate?: string, endDate?: string): Promise<ExpenseData[]> {
-  const filter: any = { familyId }
+  const filter: FilterQuery<IExpenseDocument> = { familyId }
   if (startDate || endDate) {
     filter.date = {}
     if (startDate) filter.date.$gte = startDate

@@ -10,6 +10,13 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
   } catch (error) { next(error) }
 }
 
+export async function join(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await familyService.joinByCode(req.body.inviteCode, req.user!)
+    sendSuccess(res, result, 'Te uniste a la familia correctamente')
+  } catch (error) { next(error) }
+}
+
 export async function invite(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const result = await familyService.inviteMember(req.user!.familyId!, req.body)

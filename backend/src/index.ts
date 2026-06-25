@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import { createServer } from 'http'
 import { connectDB } from './config/db'
 import { env } from './config/env'
 import { errorMiddleware } from './middlewares/error.middleware'
@@ -9,8 +10,12 @@ import familyRoutes from './routes/family.routes'
 import financeRoutes from './routes/finance.routes'
 import debtRoutes from './routes/debt.routes'
 import savingRoutes from './routes/saving.routes'
+import extraRoutes from './routes/extra.routes'
+import { initSocket } from './services/socket.service'
+import { startCronJobs } from './services/cron.service'
 
 const app = express()
+const httpServer = createServer(app)
 
 app.use(helmet())
 app.use(cors({
@@ -28,11 +33,14 @@ app.use('/api/family', familyRoutes)
 app.use('/api/finance', financeRoutes)
 app.use('/api/debts', debtRoutes)
 app.use('/api/savings', savingRoutes)
+app.use('/api', extraRoutes)
 app.use(errorMiddleware)
 
 async function start(): Promise<void> {
   await connectDB()
-  app.listen(env.PORT, () => {
+  initSocket(httpServer)
+  startCronJobs()
+  httpServer.listen(env.PORT, () => {
     console.log(`[SERVER] Miru API corriendo en puerto ${env.PORT}`)
     console.log(`[SERVER] Entorno: ${env.NODE_ENV}`)
   })

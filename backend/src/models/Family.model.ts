@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose'
 
 export interface IFamilyDocument extends Document {
   name: string
+  inviteCode: string
   members: Array<{
     userId: string
     role: 'family_admin' | 'member' | 'readonly'
@@ -14,6 +15,7 @@ export interface IFamilyDocument extends Document {
 
 const FamilySchema = new Schema<IFamilyDocument>({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
+  inviteCode: { type: String, required: true, unique: true },
   members: [{
     userId: { type: String, required: true },
     role: { type: String, enum: ['family_admin', 'member', 'readonly'], required: true },
@@ -25,5 +27,6 @@ const FamilySchema = new Schema<IFamilyDocument>({
 })
 
 FamilySchema.index({ 'members.userId': 1 })
+FamilySchema.index({ inviteCode: 1 }, { unique: true })
 
 export const FamilyModel = mongoose.model<IFamilyDocument>('Family', FamilySchema)

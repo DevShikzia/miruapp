@@ -16,9 +16,8 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
 
 export async function getAll(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { isPaid } = req.query
-    const filter = isPaid !== undefined ? { isPaid: isPaid === 'true' } : undefined
-    const result = await debtService.getAll(getFamilyId(req), filter)
+    const isPaid = req.query.isPaid as string | undefined
+    const result = await debtService.getAll(getFamilyId(req), isPaid)
     sendSuccessPaginated(res, result, result.length)
   } catch (error) { next(error) }
 }

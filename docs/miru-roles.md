@@ -164,7 +164,7 @@ SUPERADMIN_PASSWORD=clave_muy_segura_aqui
 ## 🗄️ MODELO DE USUARIO CON ROLES DUALES
 
 ```typescript
-// shared/types/user.types.ts
+// shared/types/auth.types.ts
 
 export type PlatformRole = 'superadmin' | 'agent' | 'user'
 export type FamilyRole = 'family_admin' | 'member' | 'readonly'
@@ -193,7 +193,7 @@ export interface IUser {
 // backend/src/middlewares/role.middleware.ts
 
 import { Request, Response, NextFunction } from 'express'
-import { PlatformRole, FamilyRole } from '../../shared/types/user.types'
+import { PlatformRole, FamilyRole } from '../../shared/types/auth.types'
 
 export const requirePlatformRole = (...roles: PlatformRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -219,13 +219,19 @@ export const requireFamilyRole = (...roles: FamilyRole[]) => {
 ### Uso en rutas
 
 ```typescript
-// backend/src/routes/family.routes.ts
+// backend/src/routes/family.routes.ts (ejemplos reales)
 
-router.get('/all',        authMiddleware, requirePlatformRole('superadmin'), getAllFamilies)
-router.get('/tickets',    authMiddleware, requirePlatformRole('superadmin', 'agent'), getTickets)
-router.post('/invite',    authMiddleware, requireFamilyRole('family_admin'), inviteMember)
-router.post('/expenses',  authMiddleware, requireFamilyRole('family_admin', 'member'), createExpense)
-router.patch('/users/:id/platform-role', authMiddleware, requirePlatformRole('superadmin'), changePlatformRole)
+router.post('/',                   authMiddleware, validate(createFamilySchema), familyController.create)
+router.post('/join',               authMiddleware, validate(joinFamilySchema), familyController.join)
+router.get('/my',                  authMiddleware, familyController.getMyFamily)
+router.post('/invite',             authMiddleware, requireFamilyRole('family_admin'), validate(inviteMemberSchema), familyController.invite)
+router.delete('/:familyId/members/:userId', authMiddleware, requireFamilyRole('family_admin'), familyController.removeMember)
+
+// backend/src/routes/finance.routes.ts
+
+router.post('/incomes',            authMiddleware, requireFamilyRole('family_admin', 'member'), validate(createIncomeSchema), financeController.createIncome)
+router.get('/incomes',             authMiddleware, requireFamilyRole('family_admin', 'member', 'readonly'), financeController.getAllIncomes)
+// ... mismo patrón para expenses, recurring-bills
 ```
 
 ---
@@ -239,7 +245,7 @@ router.patch('/users/:id/platform-role', authMiddleware, requirePlatformRole('su
 
 import { Injectable } from '@angular/core'
 import { AuthService } from './auth.service'
-import { PlatformRole, FamilyRole } from '../../../../shared/types/user.types'
+import { PlatformRole, FamilyRole } from '../../../../shared/types/auth.types'
 
 @Injectable({ providedIn: 'root' })
 export class RoleService {
@@ -285,7 +291,7 @@ export class RoleService {
 import { inject } from '@angular/core'
 import { CanActivateFn, Router } from '@angular/router'
 import { RoleService } from '../services/role.service'
-import { PlatformRole, FamilyRole } from '../../../../shared/types/user.types'
+import { PlatformRole, FamilyRole } from '../../../../shared/types/auth.types'
 
 export const platformRoleGuard = (...roles: PlatformRole[]): CanActivateFn => {
   return () => {
@@ -315,7 +321,7 @@ export const familyRoleGuard = (...roles: FamilyRole[]): CanActivateFn => {
 
 import { Directive, Input, TemplateRef, ViewContainerRef, OnInit } from '@angular/core'
 import { RoleService } from '../../core/services/role.service'
-import { PlatformRole, FamilyRole } from '../../../../shared/types/user.types'
+import { PlatformRole, FamilyRole } from '../../../../shared/types/auth.types'
 
 @Directive({ selector: '[appHasPlatformRole]', standalone: true })
 export class HasPlatformRoleDirective implements OnInit {
@@ -361,26 +367,41 @@ export class HasPlatformRoleDirective implements OnInit {
 ## 🗺️ RUTAS POR ROL — RESUMEN VISUAL
 
 ```
-/login                      → público
-/registro                   → público
-/unirse/:codigo             → público
+POST   /api/auth/register        → público
+POST   /api/auth/login           → público
+POST   /api/auth/google          → público
+POST   /api/auth/refresh         → público (rate-limited)
+POST   /api/auth/logout          → auth
 
-/dashboard                  → cualquier usuario autenticado
-/ingresos                   → member, family_admin, superadmin
-/gastos                     → member, family_admin, superadmin
-/deudas                     → member, family_admin, superadmin
-/checklist                  → member, family_admin, superadmin
-/ahorro                     → member, family_admin, superadmin
-/familia/configuracion      → family_admin, superadmin
+GET    /api/health               → público
 
-/soporte                    → agent, superadmin
-/soporte/tickets            → agent, superadmin
+POST   /api/family               → auth (crea familia, se asigna family_admin)
+POST   /api/family/join          → auth (se une por código)
+GET    /api/family/my            → auth
+POST   /api/family/invite        → auth + family_admin
+POST   /api/family/respond-invite→ auth
+DELETE /api/family/:id/members/:uid → auth + family_admin
 
-/admin                      → superadmin
-/admin/familias             → superadmin
-/admin/usuarios             → superadmin
-/admin/estadisticas         → superadmin
-/admin/roles                → superadmin
+GET    /api/finance/incomes      → auth + member|admin|readonly
+POST   /api/finance/incomes      → auth + member|admin
+GET    /api/finance/expenses     → auth + member|admin|readonly
+POST   /api/finance/expenses     → auth + member|admin
+GET    /api/finance/recurring-bills → auth + member|admin|readonly
+POST   /api/finance/recurring-bills → auth + member|admin
 
-/no-autorizado              → cualquiera (página de error 403)
+GET    /api/debts                → auth + member|admin|readonly
+POST   /api/debts                → auth + member|admin
+POST   /api/debts/:id/payments   → auth + member|admin
+
+GET    /api/savings              → auth + member|admin|readonly
+POST   /api/savings              → auth + member|admin
+POST   /api/savings/:id/contributions → auth + member|admin
+
+GET    /api/dashboard            → auth
+GET    /api/checklist            → auth + member|admin|readonly
+PATCH  /api/checklist/:month/items/:itemId → auth + member|admin
+
+GET    /api/notifications        → auth
+PATCH  /api/notifications/:id/read → auth
+PATCH  /api/notifications/read-all  → auth
 ```

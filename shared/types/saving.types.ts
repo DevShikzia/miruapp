@@ -43,3 +43,42 @@ export interface IContributeRequest {
   amount: number
   date?: string
 }
+
+export interface ContributionData {
+  id: string
+  amount: number
+  date: string
+}
+
+export interface SavingData {
+  _id: string
+  familyId: string
+  name: string
+  targetAmount: number
+  currentAmount: number
+  deadline: string
+  description: string
+  progress: number
+  contributions: ContributionData[]
+  createdBy: string
+  createdAt: string
+}
+
+export interface CreateSavingRequest {
+  name: string
+  targetAmount: number
+  deadline: string
+  description?: string
+}
+
+export interface UpdateSavingRequest {
+  name?: string
+  targetAmount?: number
+  deadline?: string
+  description?: string
+}
+
+export interface AddContributionRequest {
+  amount: number
+  date: string
+}

@@ -12,6 +12,11 @@ export function sendSuccess<T>(res: Response, data: T, mensaje = 'Operación exi
   res.status(statusCode).json(response)
 }
 
+export function sendSuccessPaginated<T>(res: Response, data: T[], total?: number, mensaje = 'Listado obtenido correctamente'): void {
+  const response: ApiPaginatedResponse<T> = { ok: true, data, total: total ?? data.length, page: 1, limit: total ?? data.length, mensaje }
+  res.status(200).json(response)
+}
+
 export function sendSuccessEmpty(res: Response, mensaje: string, statusCode = 200): void {
   const response: ApiSuccessEmptyResponse = { ok: true, mensaje }
   res.status(statusCode).json(response)

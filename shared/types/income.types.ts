@@ -19,6 +19,18 @@ export interface IIncome {
   createdAt: string
 }
 
+export interface IncomeData {
+  _id: string
+  familyId: string
+  amount: number
+  category: string
+  description: string
+  date: string
+  isRecurring: boolean
+  createdBy: string
+  createdAt: string
+}
+
 export interface ICreateIncomeRequest {
   description?: string
   amount: number
@@ -26,6 +38,9 @@ export interface ICreateIncomeRequest {
   date?: string
   userId?: string
 }
+
+export type CreateIncomeRequest = Omit<IncomeData, '_id' | 'familyId' | 'createdBy' | 'createdAt'>
+export type UpdateIncomeRequest = Partial<CreateIncomeRequest>
 
 export interface IUpdateIncomeRequest {
   description?: string

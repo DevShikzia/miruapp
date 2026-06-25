@@ -1,21 +1,41 @@
-import { Injectable } from '@angular/core'
+import { Injectable, NgZone } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
-import { BehaviorSubject, Observable, tap, switchMap } from 'rxjs'
+import { BehaviorSubject, Observable, tap, Subject } from 'rxjs'
 import { Router } from '@angular/router'
 import { environment } from '../../environments/environment'
+
+declare const google: any
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private userSubject = new BehaviorSubject<unknown | null>(null)
   user$ = this.userSubject.asObservable()
+  private googleCredentialSubject = new Subject<string>()
+  googleCredential$ = this.googleCredentialSubject.asObservable()
   private tokenKey = 'miru_access_token'
   private refreshKey = 'miru_refresh_token'
+  private googleInitialized = false
 
   constructor(
     private http: HttpClient,
     private router: Router,
+    private ngZone: NgZone,
   ) {
     this.loadUser()
+    this.initGoogle()
+  }
+
+  private initGoogle(): void {
+    if (typeof google === 'undefined' || this.googleInitialized) return
+    this.googleInitialized = true
+    google.accounts.id.initialize({
+      client_id: environment.googleClientId,
+      callback: (response: any) => {
+        if (response.credential) {
+          this.ngZone.run(() => this.googleCredentialSubject.next(response.credential))
+        }
+      },
+    })
   }
 
   get accessToken(): string | null {
@@ -43,6 +63,24 @@ export class AuthService {
     return this.http.post<unknown>(
       `${environment.apiUrl}/auth/register`,
       { name, email, password }
+    ).pipe(
+      tap((res: any) => this.setSession(res.data))
+    )
+  }
+
+  renderGoogleButton(container: HTMLElement): void {
+    if (typeof google === 'undefined') return
+    google.accounts.id.renderButton(container, {
+      type: 'icon',
+      shape: 'circle',
+      size: 'large',
+    })
+  }
+
+  googleLogin(credential: string): Observable<unknown> {
+    return this.http.post<unknown>(
+      `${environment.apiUrl}/auth/google`,
+      { credential }
     ).pipe(
       tap((res: any) => this.setSession(res.data))
     )

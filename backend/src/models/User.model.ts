@@ -7,7 +7,7 @@ const UserSchema = new Schema<IUserDocument>({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: false, select: false },
-  googleId: { type: String, default: null, sparse: true, unique: true },
+  googleId: { type: String },
   platformRole: {
     type: String,
     enum: ['superadmin', 'agent', 'user'],
@@ -24,7 +24,7 @@ const UserSchema = new Schema<IUserDocument>({
   createdAt: { type: Date, default: Date.now },
 })
 
-UserSchema.index({ email: 1 })
 UserSchema.index({ familyId: 1 })
+UserSchema.index({ googleId: 1 }, { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } })
 
 export const UserModel = mongoose.model<IUserDocument>('User', UserSchema)

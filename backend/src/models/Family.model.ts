@@ -27,6 +27,5 @@ const FamilySchema = new Schema<IFamilyDocument>({
 })
 
 FamilySchema.index({ 'members.userId': 1 })
-FamilySchema.index({ inviteCode: 1 }, { unique: true })
 
 export const FamilyModel = mongoose.model<IFamilyDocument>('Family', FamilySchema)

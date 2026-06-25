@@ -8,6 +8,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/splash/splash.component').then(m => m.SplashComponent),
   },
   {
+    path: 'onboarding',
+    loadComponent: () => import('./pages/onboarding/onboarding.component').then(m => m.OnboardingComponent),
+  },
+  {
     path: 'login',
     canActivate: [loginGuard],
     loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent),

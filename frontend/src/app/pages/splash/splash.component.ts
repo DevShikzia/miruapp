@@ -152,6 +152,8 @@ export class SplashComponent implements OnInit {
       setTimeout(() => {
         if (this.auth.isLoggedIn) {
           this.router.navigate(['/dashboard'])
+        } else if (!localStorage.getItem('onboarding_visto')) {
+          this.router.navigate(['/onboarding'])
         } else {
           this.router.navigate(['/login'])
         }

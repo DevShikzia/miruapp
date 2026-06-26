@@ -249,7 +249,7 @@ const MOCK_DATA: DashboardData = {
 
     /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; height: 44px; }
-    .logo { height: 32px; }
+    .logo { height: 24px; }
     .header-actions { display: flex; gap: 16px; }
     .icon-btn {
       background: none; border: none; color: #8A95A8; cursor: pointer;

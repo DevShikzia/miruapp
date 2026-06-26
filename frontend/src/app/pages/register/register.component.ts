@@ -154,7 +154,7 @@ import { Subject, takeUntil } from 'rxjs'
       display: flex;
       justify-content: center;
     }
-    .logo { height: 40px; }
+    .logo { height: 28px; }
     .welcome {
       margin-top: 32px;
       text-align: left;

@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router'
+﻿import { Routes } from '@angular/router'
 import { authGuard, loginGuard } from './guards/auth.guard'
 
 export const routes: Routes = [
@@ -20,6 +20,10 @@ export const routes: Routes = [
     path: 'register',
     canActivate: [loginGuard],
     loadComponent: () => import('./pages/register/register.component').then(m => m.RegisterComponent),
+  },
+  {
+    path: 'ingresos/editar/:id',
+    loadComponent: () => import('./pages/incomes/edit-income/edit-income.component').then(m => m.EditIncomeComponent),
   },
   {
     path: '',

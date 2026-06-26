@@ -12,7 +12,7 @@ import { Subject, takeUntil } from 'rxjs'
   template: `
     <div class="register-page">
       <div class="header">
-        <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo" />
+        <svg width="80" height="32" viewBox="0 0 80 32" fill="none" xmlns="http://www.w3.org/2000/svg"><text x="0" y="24" font-family="Inter, sans-serif" font-size="22" font-weight="800" fill="#F0F2F5">Miru</text></svg>
       </div>
 
       <div class="welcome">
@@ -117,7 +117,7 @@ import { Subject, takeUntil } from 'rxjs'
         <!-- Submit -->
         <button type="submit" class="btn-primary" [disabled]="!canSubmit || loading">
           <span *ngIf="!loading">Crear cuenta</span>
-          <img *ngIf="loading" src="assets/miru-icon.svg" alt="" class="btn-spinner" />
+          <span *ngIf="loading" class="btn-spinner"></span>
         </button>
       </form>
 
@@ -302,9 +302,13 @@ import { Subject, takeUntil } from 'rxjs'
     .btn-primary:hover:not(:disabled) { background: #D89BDF; }
     .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-spinner {
+      display: inline-block;
       width: 22px;
       height: 22px;
-      animation: spin 2s linear infinite;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
     }
     @keyframes spin {
       to { transform: rotate(360deg); }

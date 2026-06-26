@@ -1,7 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core'
+import { Component } from '@angular/core'
 import { Router } from '@angular/router'
 import { NgIf, NgFor, DecimalPipe } from '@angular/common'
-import { Subject, takeUntil } from 'rxjs'
 import { ApiService } from '../../services/api.service'
 import type { DebtData } from '@shared/types/debt.types'
 
@@ -166,16 +165,17 @@ import type { DebtData } from '@shared/types/debt.types'
     .urgency-tag.overdue { color: #E05252; background: rgba(224,82,82,0.15); }
   `]
 })
-export class DebtsComponent implements OnInit, OnDestroy {
+export class DebtsComponent {
   state: 'loading' | 'loaded' | 'error' = 'loading'
   debts: DebtData[] = []
   filter: 'active' | 'paid' = 'active'
-  private destroy$ = new Subject<void>()
 
   constructor(
     private api: ApiService,
     private router: Router,
-  ) {}
+  ) {
+    this.loadDebts()
+  }
 
   get filteredDebts(): DebtData[] {
     return this.debts.filter(d => this.filter === 'active' ? !d.isPaid : d.isPaid)
@@ -200,28 +200,17 @@ export class DebtsComponent implements OnInit, OnDestroy {
     return this.debts.filter(d => !d.isPaid).length
   }
 
-  ngOnInit(): void {
-    this.loadDebts()
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next()
-    this.destroy$.complete()
-  }
-
   loadDebts(): void {
     this.state = 'loading'
-    this.api.get<DebtData[]>('/debts')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          this.debts = res.data
-          this.state = 'loaded'
-        },
-        error: () => {
-          this.state = 'error'
-        },
-      })
+    this.api.get<DebtData[]>('/debts').subscribe({
+      next: (res) => {
+        this.debts = res.data
+        this.state = 'loaded'
+      },
+      error: () => {
+        this.state = 'error'
+      },
+    })
   }
 
   progressGradient(pct: number): string {

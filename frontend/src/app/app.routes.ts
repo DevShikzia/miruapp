@@ -30,6 +30,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/incomes/edit-income/edit-income.component').then(m => m.EditIncomeComponent),
   },
   {
+    path: 'gastos/editar/:id',
+    loadComponent: () => import('./pages/expenses/edit-expense/edit-expense.component').then(m => m.EditExpenseComponent),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),

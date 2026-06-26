@@ -229,7 +229,7 @@ const MOCK_DATA: DashboardData = {
   `,
   styles: [`
     :host { display: block; }
-    .dashboard { padding: 56px 20px 80px; display: flex; flex-direction: column; gap: 0; }
+    .dashboard { padding: 40px 20px 80px; display: flex; flex-direction: column; gap: 0; }
 
     /* Skeleton */
     .skeleton { background: #1E2530; border-radius: 12px; animation: shimmer 1.5s ease-in-out infinite; }
@@ -249,7 +249,7 @@ const MOCK_DATA: DashboardData = {
 
     /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; height: 44px; }
-    .logo { height: 32px; margin-left: -6px; }
+    .logo { height: 32px; }
     .header-actions { display: flex; gap: 16px; }
     .icon-btn {
       background: none; border: none; color: #8A95A8; cursor: pointer;

@@ -180,7 +180,7 @@ const PAYMENT_ICONS: Record<string, string> = {
     .container { padding: 0 24px; max-width: 390px; margin: 0 auto; position: relative; min-height: 100vh; }
     ::-webkit-scrollbar { display: none; }
 
-    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 56px; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 40px; }
     .btn-back { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; margin-left: -4px; }
     .title { font-size: 20px; font-weight: 700; color: #F0F2F5; margin: 0; }
     .btn-save-header { background: none; border: none; padding: 4px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #E05252; transition: opacity 150ms; display: flex; align-items: center; gap: 6px; }

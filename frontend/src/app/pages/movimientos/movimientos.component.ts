@@ -207,7 +207,7 @@ function groupByDate(movements: Movement[]): DateGroup[] {
     ::-webkit-scrollbar { display: none; }
 
     /* Header */
-    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 56px; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 40px; }
     .btn-back, .btn-add { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; }
     .title { font-size: 20px; font-weight: 700; color: #F0F2F5; margin: 0; }
 

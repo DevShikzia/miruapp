@@ -104,7 +104,7 @@ import { Subject, takeUntil } from 'rxjs'
     .login-page {
       min-height: 100vh;
       background: #0C0F14;
-      padding: 64px 24px 0;
+      padding: 48px 24px 0;
       display: flex;
       flex-direction: column;
     }

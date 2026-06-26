@@ -1,6 +1,7 @@
 import { Component } from '@angular/core'
 import { Router } from '@angular/router'
 import { NgIf, NgFor, DecimalPipe } from '@angular/common'
+import { catchError, throwError } from 'rxjs'
 import { ApiService } from '../../services/api.service'
 import type { DebtData } from '@shared/types/debt.types'
 
@@ -177,6 +178,10 @@ export class DebtsComponent {
     this.loadDebts()
   }
 
+  debug(...args: unknown[]): void {
+    console.log('[Deudas]', ...args)
+  }
+
   get filteredDebts(): DebtData[] {
     return this.debts.filter(d => this.filter === 'active' ? !d.isPaid : d.isPaid)
   }
@@ -202,12 +207,20 @@ export class DebtsComponent {
 
   loadDebts(): void {
     this.state = 'loading'
-    this.api.get<DebtData[]>('/debts').subscribe({
+    this.api.get<DebtData[]>('/debts').pipe(
+      catchError((err) => {
+        console.error('[Deudas] catchError:', err)
+        return throwError(() => err)
+      })
+    ).subscribe({
       next: (res) => {
+        console.log('[Deudas] next, data:', res?.data, 'state:', this.state)
         this.debts = res?.data ?? []
         this.state = 'loaded'
+        console.log('[Deudas] state updated to loaded')
       },
-      error: () => {
+      error: (err) => {
+        console.error('[Deudas] subscribe error:', err)
         this.state = 'error'
       },
     })

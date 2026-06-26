@@ -1,5 +1,6 @@
 ﻿import { Component, OnDestroy } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser'
 import { Router } from '@angular/router'
 import { NgIf, NgFor } from '@angular/common'
 import { Subject, takeUntil } from 'rxjs'
@@ -57,13 +58,13 @@ const CATEGORY_ICONS: Record<string, string> = {
           <span class="monto-prefix">$</span>
           <input
             class="monto-input"
-            [(ngModel)]="amountDisplay"
+            [value]="amountDisplay"
             name="amount"
             type="text"
             inputmode="numeric"
             (input)="onAmountInput($event)"
             (focus)="onAmountFocus()"
-            placeholder="0"
+            placeholder="0" (keydown)="onKeydown($event)"
             autofocus
           />
         </div>
@@ -168,6 +169,7 @@ export class CreateIncomeComponent implements OnDestroy {
   constructor(
     private api: ApiService,
     private router: Router,
+    private sanitizer: DomSanitizer,
   ) {}
 
   get canSave(): boolean {
@@ -184,6 +186,14 @@ export class CreateIncomeComponent implements OnDestroy {
     const raw = input.value.replace(/[^0-9]/g, '')
     this.amount = raw ? parseInt(raw, 10) : 0
     this.amountDisplay = this.amount > 0 ? this.amount.toLocaleString('es-AR') : ''
+    input.value = this.amountDisplay
+  }
+
+  onKeydown(event: KeyboardEvent): void {
+    const allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
+    if (allowed.includes(event.key)) return
+    if ((event.ctrlKey || event.metaKey) && ['c', 'v', 'a', 'x'].includes(event.key.toLowerCase())) return
+    if (!/^\d$/.test(event.key)) { event.preventDefault() }
   }
 
   onAmountFocus(): void {
@@ -192,8 +202,10 @@ export class CreateIncomeComponent implements OnDestroy {
     }
   }
 
-  getIcon(name: string): string {
-    return CATEGORY_ICONS[name] || CATEGORY_ICONS['ellipsis']
+  getIcon(name: string): SafeHtml {
+    const p = CATEGORY_ICONS[name] || CATEGORY_ICONS['ellipsis']
+    const svg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'
+    return this.sanitizer.bypassSecurityTrustHtml(svg)
   }
 
   selectCategory(cat: IncomeCategory): void {

@@ -50,7 +50,7 @@ const CATEGORY_ICONS: Record<string, string> = {
         <button class="btn-save-header" [class.disabled]="!dirty" [disabled]="!dirty || state === 'saving'" (click)="onSave()">
           <span *ngIf="state !== 'saving'">Guardar</span>
           <span *ngIf="state === 'saving'" class="header-spinner">
-            <img src="assets/miru-icon.svg" alt="" class="spin-icon" />
+            <span class="spinner-sm"></span>
           </span>
         </button>
       </header>
@@ -118,7 +118,7 @@ const CATEGORY_ICONS: Record<string, string> = {
         <button class="btn-save" [disabled]="!dirty || state === 'saving'" (click)="onSave()">
           <span *ngIf="state !== 'saving'">Guardar cambios</span>
           <span *ngIf="state === 'saving'" class="save-spinner">
-            <img src="assets/miru-icon.svg" alt="" class="spin-icon" />
+            <span class="spinner-sm"></span>
           </span>
         </button>
       </ng-container>
@@ -152,7 +152,7 @@ const CATEGORY_ICONS: Record<string, string> = {
     .btn-save-header { background: none; border: none; padding: 4px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #E4B3E9; transition: opacity 150ms; display: flex; align-items: center; gap: 6px; }
     .btn-save-header.disabled { opacity: 0.4; cursor: not-allowed; }
     .header-spinner { display: flex; align-items: center; }
-    .spin-icon { width: 18px; height: 18px; animation: spin 0.6s linear infinite; }
+    .spinner-sm { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(228,179,233,0.2); border-top-color: #E4B3E9; border-radius: 50%; animation: spin 0.6s linear infinite; }
 
     .loading-state { padding-top: 32px; }
     .skeleton-monto { height: 72px; width: 200px; margin: 0 auto; background: #1E2530; border-radius: 12px; animation: shimmer 1.5s infinite; }
@@ -185,7 +185,7 @@ const CATEGORY_ICONS: Record<string, string> = {
     .btn-save { width: 100%; height: 44px; margin-top: 28px; background: #15C48C; color: #041710; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 150ms; }
     .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
     .save-spinner { display: flex; align-items: center; }
-    .save-spinner .spin-icon { width: 20px; height: 20px; }
+    .save-spinner .spinner-sm { width: 20px; height: 20px; }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px; }
     .modal-card { background: #161B24; border-radius: 20px; padding: 24px; width: 100%; max-width: 320px; border: 1px solid rgba(255,255,255,0.06); }

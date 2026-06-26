@@ -107,9 +107,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 
       <button class="btn-save" [disabled]="!canSave || state === 'saving'" (click)="onSave()">
         <span *ngIf="state !== 'saving'">Guardar ingreso</span>
-        <span *ngIf="state === 'saving'" class="save-spinner">
-          <img src="assets/miru-icon.svg" alt="" class="spin-icon" />
-        </span>
+          <span *ngIf="state === 'saving'" class="save-spinner">
+            <span class="spinner-sm"></span>
+          </span>
       </button>
     </div>
   `,
@@ -150,7 +150,7 @@ const CATEGORY_ICONS: Record<string, string> = {
     .btn-save { width: 100%; height: 44px; margin-top: 28px; background: #15C48C; color: #041710; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 150ms; }
     .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
     .save-spinner { display: flex; align-items: center; }
-    .save-spinner .spin-icon { width: 20px; height: 20px; animation: spin 0.6s linear infinite; }
+    .save-spinner .spinner-sm { width: 20px; height: 20px; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
   `]

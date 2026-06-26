@@ -204,7 +204,7 @@ export class DebtsComponent {
     this.state = 'loading'
     this.api.get<DebtData[]>('/debts').subscribe({
       next: (res) => {
-        this.debts = res.data
+        this.debts = res?.data ?? []
         this.state = 'loaded'
       },
       error: () => {

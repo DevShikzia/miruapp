@@ -15,6 +15,7 @@ import { initSocket } from './services/socket.service'
 import { startCronJobs } from './services/cron.service'
 
 const app = express()
+app.set('etag', false)
 const httpServer = createServer(app)
 
 app.use(helmet())

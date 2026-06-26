@@ -9,7 +9,7 @@ import { AuthService } from '../../services/auth.service'
     <div class="splash">
       <div class="glow"></div>
       <div class="content">
-        <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="96" height="96" rx="24" fill="#E4B3E9"/><text x="48" y="64" font-family="Inter, sans-serif" font-size="48" font-weight="800" fill="#0C0F14" text-anchor="middle">M</text></svg>
+        <img src="assets/miru-icon.svg" alt="Miru" class="logo" />
         <div class="wordmark">
           <span class="title">Miru</span>
           <span class="badge">APP</span>

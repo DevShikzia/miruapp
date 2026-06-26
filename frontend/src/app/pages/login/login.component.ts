@@ -12,7 +12,7 @@ import { Subject, takeUntil } from 'rxjs'
   template: `
     <div class="login-page">
       <div class="header">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="#E4B3E9"/><text x="20" y="27" font-family="Inter, sans-serif" font-size="20" font-weight="800" fill="#0C0F14" text-anchor="middle">M</text></svg>
+        <img src="assets/miru-icon.svg" alt="Miru" class="logo" />
         <span class="wordmark">Miru</span>
         <span class="badge">APP</span>
       </div>

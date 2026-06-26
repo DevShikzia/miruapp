@@ -24,7 +24,7 @@ interface Slide {
             <div class="float-icon icon-money">💰</div>
             <div class="float-icon icon-star">⭐</div>
             <div class="center-icon">
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="12" fill="#E4B3E9"/><text x="24" y="32" font-family="Inter, sans-serif" font-size="24" font-weight="800" fill="#0C0F14" text-anchor="middle">M</text></svg>
+              <img src="assets/miru-icon.svg" alt="Miru" />
               <div class="glow-ring"></div>
             </div>
           </div>

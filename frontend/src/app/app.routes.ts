@@ -22,6 +22,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/register/register.component').then(m => m.RegisterComponent),
   },
   {
+    path: 'ingresos/nuevo',
+    loadComponent: () => import('./pages/incomes/create-income/create-income.component').then(m => m.CreateIncomeComponent),
+  },
+  {
     path: 'ingresos/editar/:id',
     loadComponent: () => import('./pages/incomes/edit-income/edit-income.component').then(m => m.EditIncomeComponent),
   },

@@ -76,7 +76,8 @@ const MOCK_DATA: DashboardData = {
     <div class="dashboard" *ngIf="state === 'loaded'">
       <!-- Header -->
       <header class="header">
-        <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo" />
+        <img src="assets/miru-icon.svg" alt="Miru" class="logo-mobile" />
+        <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo-desktop" />
         <div class="header-actions">
           <button class="icon-btn" (click)="onNotificationClick()">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -249,7 +250,12 @@ const MOCK_DATA: DashboardData = {
 
     /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; height: 44px; }
-    .logo { height: 24px; }
+    .logo-mobile { display: block; width: 28px; height: 28px; }
+    .logo-desktop { display: none; }
+    @media (min-width: 768px) {
+      .logo-mobile { display: none; }
+      .logo-desktop { display: block; height: 24px; }
+    }
     .header-actions { display: flex; gap: 16px; }
     .icon-btn {
       background: none; border: none; color: #8A95A8; cursor: pointer;

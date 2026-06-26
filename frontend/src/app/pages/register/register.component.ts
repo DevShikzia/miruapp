@@ -12,7 +12,8 @@ import { Subject, takeUntil } from 'rxjs'
   template: `
     <div class="register-page">
       <div class="header">
-        <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo" />
+        <img src="assets/miru-icon.svg" alt="Miru" class="logo-mobile" />
+        <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo-desktop" />
       </div>
 
       <div class="welcome">
@@ -154,7 +155,12 @@ import { Subject, takeUntil } from 'rxjs'
       display: flex;
       justify-content: center;
     }
-    .logo { height: 28px; }
+    .logo-mobile { display: block; width: 28px; height: 28px; }
+    .logo-desktop { display: none; }
+    @media (min-width: 768px) {
+      .logo-mobile { display: none; }
+      .logo-desktop { display: block; height: 28px; }
+    }
     .welcome {
       margin-top: 32px;
       text-align: left;

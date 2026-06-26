@@ -26,6 +26,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/incomes/create-income/create-income.component').then(m => m.CreateIncomeComponent),
   },
   {
+    path: 'gastos/nuevo',
+    loadComponent: () => import('./pages/expenses/create-expense/create-expense.component').then(m => m.CreateExpenseComponent),
+  },
+  {
     path: 'ingresos/editar/:id',
     loadComponent: () => import('./pages/incomes/edit-income/edit-income.component').then(m => m.EditIncomeComponent),
   },

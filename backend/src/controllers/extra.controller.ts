@@ -1,13 +1,19 @@
 import { Response, NextFunction } from 'express'
 import { AuthRequest } from '../middlewares/auth.middleware'
+import { BadRequestError } from '../utils/errors'
 import * as dashboardService from '../services/dashboard.service'
 import * as checklistService from '../services/checklist.service'
 import * as notificationService from '../services/notification.service'
 import { sendSuccess, sendSuccessPaginated } from '../utils/response'
 
+function requireFamily(user: AuthRequest['user']): string {
+  if (!user?.familyId) throw new BadRequestError('Necesitás crear o unirte a una familia primero')
+  return user.familyId
+}
+
 export async function getDashboard(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const data = await dashboardService.getDashboard(req.user!.familyId!)
+    const data = await dashboardService.getDashboard(requireFamily(req.user))
     sendSuccess(res, data)
   } catch (error) { next(error) }
 }
@@ -15,7 +21,7 @@ export async function getDashboard(req: AuthRequest, res: Response, next: NextFu
 export async function getChecklist(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const month = req.query.month as string | undefined
-    const data = await checklistService.getOrCreate(req.user!.familyId!, month)
+    const data = await checklistService.getOrCreate(requireFamily(req.user), month)
     sendSuccess(res, data)
   } catch (error) { next(error) }
 }
@@ -24,7 +30,7 @@ export async function toggleChecklistItem(req: AuthRequest, res: Response, next:
   try {
     const month = req.params.month
     const itemId = req.params.itemId
-    const data = await checklistService.toggleItem(req.user!.familyId!, month, itemId, req.user!._id)
+    const data = await checklistService.toggleItem(requireFamily(req.user), month, itemId, req.user!._id)
     sendSuccess(res, data, 'Item actualizado correctamente')
   } catch (error) { next(error) }
 }
@@ -32,7 +38,7 @@ export async function toggleChecklistItem(req: AuthRequest, res: Response, next:
 export async function addChecklistItem(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const month = req.params.month
-    const data = await checklistService.addItem(req.user!.familyId!, month, req.body, req.user!._id)
+    const data = await checklistService.addItem(requireFamily(req.user), month, req.body, req.user!._id)
     sendSuccess(res, data, 'Tarea agregada correctamente')
   } catch (error) { next(error) }
 }
@@ -41,7 +47,7 @@ export async function deleteChecklistItem(req: AuthRequest, res: Response, next:
   try {
     const month = req.params.month
     const itemId = req.params.itemId
-    const data = await checklistService.deleteItem(req.user!.familyId!, month, itemId)
+    const data = await checklistService.deleteItem(requireFamily(req.user), month, itemId)
     sendSuccess(res, data, 'Tarea eliminada correctamente')
   } catch (error) { next(error) }
 }

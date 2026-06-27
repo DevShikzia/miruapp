@@ -29,6 +29,23 @@ export async function toggleChecklistItem(req: AuthRequest, res: Response, next:
   } catch (error) { next(error) }
 }
 
+export async function addChecklistItem(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const month = req.params.month
+    const data = await checklistService.addItem(req.user!.familyId!, month, req.body, req.user!._id)
+    sendSuccess(res, data, 'Tarea agregada correctamente')
+  } catch (error) { next(error) }
+}
+
+export async function deleteChecklistItem(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const month = req.params.month
+    const itemId = req.params.itemId
+    const data = await checklistService.deleteItem(req.user!.familyId!, month, itemId)
+    sendSuccess(res, data, 'Tarea eliminada correctamente')
+  } catch (error) { next(error) }
+}
+
 export async function getNotifications(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = await notificationService.getAll(req.user!._id)

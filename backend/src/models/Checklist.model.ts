@@ -6,6 +6,12 @@ export interface IChecklistDocument extends Document {
   items: Array<{
     _id: Types.ObjectId
     label: string
+    amount: number | null
+    dueDay: number | null
+    category: string | null
+    isRecurring: boolean
+    isCustom: boolean
+    assignedTo: string | null
     completed: boolean
     completedBy: string | null
     completedAt: string | null
@@ -19,6 +25,12 @@ const ChecklistSchema = new Schema<IChecklistDocument>({
   month: { type: String, required: true },
   items: [{
     label: { type: String, required: true },
+    amount: { type: Number, default: null },
+    dueDay: { type: Number, default: null },
+    category: { type: String, default: null },
+    isRecurring: { type: Boolean, default: false },
+    isCustom: { type: Boolean, default: false },
+    assignedTo: { type: String, default: null },
     completed: { type: Boolean, default: false },
     completedBy: { type: String, default: null },
     completedAt: { type: String, default: null },

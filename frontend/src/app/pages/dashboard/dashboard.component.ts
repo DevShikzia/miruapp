@@ -616,7 +616,7 @@ export class DashboardComponent {
   toggleItem(item: IChecklistItem): void {
     if (this.clToggling || !this.clSummary.month) return
     this.clToggling = true
-    this.api.patch(`/checklist/${this.clSummary.month}/items/${item._id}`, {})
+    this.api.patch<IChecklistResponse>(`/checklist/${this.clSummary.month}/items/${item._id}`, {})
       .subscribe({
         next: (res) => {
           const cl = res?.data
@@ -641,7 +641,7 @@ export class DashboardComponent {
     const name = this.newTaskName.trim()
     if (!name || this.clAdding || !this.clSummary.month) return
     this.clAdding = true
-    this.api.post(`/checklist/${this.clSummary.month}/items`, { name })
+    this.api.post<IChecklistResponse>(`/checklist/${this.clSummary.month}/items`, { name })
       .subscribe({
         next: (res) => {
           const cl = res?.data
@@ -666,7 +666,7 @@ export class DashboardComponent {
 
   deleteItem(id: string): void {
     if (!this.clSummary.month) return
-    this.api.delete(`/checklist/${this.clSummary.month}/items/${id}`)
+    this.api.delete<IChecklistResponse>(`/checklist/${this.clSummary.month}/items/${id}`)
       .subscribe({
         next: (res) => {
           const cl = res?.data

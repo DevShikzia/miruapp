@@ -1,9 +1,8 @@
-import { Component, computed, signal } from '@angular/core'
+import { Component } from '@angular/core'
 import { Router, ActivatedRoute } from '@angular/router'
 import { FormsModule } from '@angular/forms'
-import { NgIf, NgFor, DecimalPipe } from '@angular/common'
+import { NgIf, NgFor } from '@angular/common'
 import { ApiService } from '../../../services/api.service'
-import { GoalEmojiPipe } from '../../../pipes/goal-emoji.pipe'
 import type { SavingData, UpdateSavingRequest } from '@shared/types/saving.types'
 import type { SavingColor } from '@shared/types/saving.types'
 
@@ -21,7 +20,7 @@ const COLORS: { value: SavingColor; label: string }[] = [
 @Component({
   selector: 'app-edit-saving',
   standalone: true,
-  imports: [FormsModule, NgIf, NgFor, DecimalPipe, GoalEmojiPipe],
+  imports: [FormsModule, NgIf, NgFor],
   template: `
     <div class="page">
       <!-- Modal descarte -->

@@ -1,6 +1,6 @@
 import { Component, ChangeDetectorRef } from '@angular/core'
 import { Router } from '@angular/router'
-import { NgIf, NgFor } from '@angular/common'
+import { NgIf, NgFor, DecimalPipe, DatePipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { ApiService } from '../../services/api.service'
 import type { FamilyData, FamilyBalanceResponse, MemberContribution, ActivityItem } from '@shared/types/family.types'
@@ -9,7 +9,7 @@ import type { ICreateFamilyRequest, IJoinFamilyRequest } from '@shared/types/fam
 @Component({
   selector: 'app-familia',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule],
+  imports: [NgIf, NgFor, FormsModule, DecimalPipe, DatePipe],
   template: `
     <div class="page"
       (touchstart)="onTouchStart($event)"
@@ -458,7 +458,7 @@ export class FamiliaComponent {
     if (!name || this.creating) return
     this.creating = true
     this.createError = ''
-    this.api.post<ICreateFamilyRequest>('/family', { name })
+    this.api.post<FamilyData>('/family', { name })
       .subscribe({
         next: (res) => {
           this.family = res?.data ?? null
@@ -480,7 +480,7 @@ export class FamiliaComponent {
     if (code.length !== 8 || this.joining) return
     this.joining = true
     this.joinError = ''
-    this.api.post<IJoinFamilyRequest>('/family/join', { inviteCode: code })
+    this.api.post<FamilyData>('/family/join', { inviteCode: code })
       .subscribe({
         next: (res) => {
           this.family = res?.data ?? null

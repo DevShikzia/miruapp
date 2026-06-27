@@ -109,9 +109,10 @@ import type { ICreateFamilyRequest, IJoinFamilyRequest } from '@shared/types/fam
               [(ngModel)]="joinCode"
               name="joinCode"
               type="text"
-              placeholder="Ej: aB3xK9mQ"
+              placeholder="Ej: AB3XK9MQ"
               maxlength="8"
               (keyup.enter)="joinGroup()"
+              (input)="joinCode = joinCode.toUpperCase()"
               autofocus
             />
           </div>
@@ -740,7 +741,7 @@ export class FamiliaComponent {
     if (code.length !== 8 || this.joining) return
     this.joining = true
     this.joinError = ''
-    this.api.post<FamilyData>('/family/join', { inviteCode: code })
+    this.api.post<FamilyData>('/family/join', { inviteCode: code.toUpperCase() })
       .subscribe({
         next: (res) => {
           this.family = res?.data ?? null

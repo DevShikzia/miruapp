@@ -15,8 +15,8 @@ import {
 } from '../utils/errors'
 
 function generateInviteCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from(crypto.randomBytes(8)).map(b => chars[b % 62]).join('')
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  // legible: sin 0/O/I/1/L
+  return Array.from(crypto.randomBytes(6)).map(b => chars[b % 30]).join('')
 }
 
 function toFamilyData(family: IFamilyDocument): FamilyData {
@@ -110,7 +110,7 @@ export async function respondInvite(userId: string, _inviteId: string, accept: b
 }
 
 export async function joinByCode(inviteCode: string, user: IUserPublic): Promise<FamilyData> {
-  const family = await FamilyModel.findOne({ inviteCode })
+  const family = await FamilyModel.findOne({ inviteCode: inviteCode.toUpperCase() })
   if (!family) throw new NotFoundError('Código de invitación inválido')
 
   const existing = family.members.find((m) => m.userId === user._id)

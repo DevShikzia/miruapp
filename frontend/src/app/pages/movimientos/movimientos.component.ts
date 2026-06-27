@@ -1,6 +1,9 @@
-import { Component, HostListener } from '@angular/core'
+import { Component, HostListener, ChangeDetectorRef } from '@angular/core'
 import { NgIf, NgFor, NgClass, DecimalPipe } from '@angular/common'
 import { RouterLink } from '@angular/router'
+import { ApiService } from '../../services/api.service'
+import type { IncomeData } from '@shared/types/income.types'
+import type { ExpenseData } from '@shared/types/expense.types'
 
 type MovementType = 'income' | 'expense' | 'transfer'
 type FilterType = 'month' | 'all' | 'income' | 'expense' | 'category'
@@ -34,33 +37,22 @@ const CATEGORY_LABELS: Record<string, string> = {
   entertainment: 'Entretenimiento', other: 'Otro',
 }
 
-const MOCK_MOVEMENTS: Movement[] = [
-  { id: '1', type: 'income', description: 'Salario mensual', amount: 150000, category: 'Salario', categoryKey: 'salary', date: '2026-06-25', time: '10:30' },
-  { id: '2', type: 'expense', description: 'Supermercado', amount: 12500, category: 'Comidas', categoryKey: 'food', date: '2026-06-25', time: '14:15' },
-  { id: '3', type: 'expense', description: 'Netflix', amount: 1499, category: 'Entretenimiento', categoryKey: 'entertainment', date: '2026-06-25', time: '08:00' },
-  { id: '4', type: 'income', description: 'Trabajo freelance', amount: 45000, category: 'Freelance', categoryKey: 'freelance', date: '2026-06-24', time: '11:00' },
-  { id: '5', type: 'expense', description: 'Cena familiar', amount: 3200, category: 'Comidas', categoryKey: 'food', date: '2026-06-24', time: '21:30' },
-  { id: '6', type: 'expense', description: 'Carga de nafta', amount: 5800, category: 'Transporte', categoryKey: 'transport', date: '2026-06-24', time: '16:45' },
-  { id: '7', type: 'expense', description: 'Alquiler', amount: 85000, category: 'Alquiler', categoryKey: 'rent', date: '2026-06-20', time: '09:00' },
-  { id: '8', type: 'income', description: 'Reembolso gastos', amount: 8500, category: 'Reembolso', categoryKey: 'refund', date: '2026-06-20', time: '15:20' },
-  { id: '9', type: 'expense', description: 'Factura de luz', amount: 6200, category: 'Servicios', categoryKey: 'utilities', date: '2026-06-15', time: '07:30' },
-  { id: '10', type: 'expense', description: 'Teléfono móvil', amount: 4800, category: 'Servicios', categoryKey: 'utilities', date: '2026-06-15', time: '08:15' },
-  { id: '11', type: 'income', description: 'Dividendos', amount: 22000, category: 'Inversión', categoryKey: 'investment', date: '2026-06-15', time: '10:00' },
-  { id: '12', type: 'expense', description: 'Consulta médica', amount: 9500, category: 'Salud', categoryKey: 'health', date: '2026-06-10', time: '11:30' },
-  { id: '13', type: 'expense', description: 'Uber', amount: 2100, category: 'Transporte', categoryKey: 'transport', date: '2026-06-10', time: '09:15' },
-  { id: '14', type: 'income', description: 'Venta de muebles', amount: 35000, category: 'Venta', categoryKey: 'sale', date: '2026-06-10', time: '16:00' },
-  { id: '15', type: 'transfer', description: 'Ahorro mensual', amount: 20000, category: 'Transferencia', categoryKey: 'other', date: '2026-06-10', time: '14:00' },
-]
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-const MONTHS: MonthOption[] = [
-  { label: 'Enero 2026', value: '2026-01' },
-  { label: 'Febrero 2026', value: '2026-02' },
-  { label: 'Marzo 2026', value: '2026-03' },
-  { label: 'Abril 2026', value: '2026-04' },
-  { label: 'Mayo 2026', value: '2026-05' },
-  { label: 'Junio 2026', value: '2026-06' },
-  { label: 'Julio 2026', value: '2026-07' },
-]
+function buildMonthOptions(): MonthOption[] {
+  const now = new Date()
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    return { label: `${MONTH_NAMES[d.getMonth()]} ${y}`, value: `${y}-${m}` }
+  })
+}
+
+function currentMonth(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
 
 function getDateLabel(dateStr: string): string {
   const today = new Date()
@@ -284,15 +276,15 @@ function groupByDate(movements: Movement[]): DateGroup[] {
 })
 export class MovimientosComponent {
   state: 'loading' | 'loaded' | 'error' | 'loading-more' = 'loading'
-  allMovements: Movement[] = MOCK_MOVEMENTS
+  allMovements: Movement[] = []
   displayMovements: Movement[] = []
   groupedDisplay: DateGroup[] = []
   pageSize = 20
   loadedCount = 0
   activeFilter: FilterType = 'all'
   showMonthPicker = false
-  selectedMonth = '2026-06'
-  months = MONTHS
+  selectedMonth = currentMonth()
+  months = buildMonthOptions()
 
   chips = [
     { key: 'month' as FilterType, label: 'Este mes' },
@@ -301,6 +293,11 @@ export class MovimientosComponent {
     { key: 'expense' as FilterType, label: 'Gastos' },
     { key: 'category' as FilterType, label: 'Categoría' },
   ]
+
+  constructor(
+    private api: ApiService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   get selectedMonthLabel(): string {
     return this.months.find(m => m.value === this.selectedMonth)?.label || 'Este mes'
@@ -344,11 +341,55 @@ export class MovimientosComponent {
     this.loadedCount = 0
     this.displayMovements = []
     this.groupedDisplay = []
+    this.cdr.markForCheck()
+
+    this.api.get<IncomeData[]>('/finance/incomes').subscribe({
+      next: (incRes) => {
+        this.api.get<ExpenseData[]>('/finance/expenses').subscribe({
+          next: (expRes) => {
+            const incomes: Movement[] = (incRes.data ?? []).map(i => ({
+              id: i._id,
+              type: 'income',
+              description: i.description || i.category,
+              amount: i.amount,
+              category: CATEGORY_LABELS[i.category] || i.category,
+              categoryKey: i.category,
+              date: i.date,
+              time: i.createdAt ? i.createdAt.slice(11, 16) : '',
+            }))
+            const expenses: Movement[] = (expRes.data ?? []).map(e => ({
+              id: e._id,
+              type: 'expense',
+              description: e.description || e.category,
+              amount: e.amount,
+              category: CATEGORY_LABELS[e.category] || e.category,
+              categoryKey: e.category,
+              date: e.date,
+              time: e.createdAt ? e.createdAt.slice(11, 16) : '',
+            }))
+            this.allMovements = [...incomes, ...expenses].sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
+            this.state = 'loaded'
+            this.cdr.markForCheck()
+            this.loadMore()
+          },
+          error: () => {
+            this.state = 'error'
+            this.cdr.markForCheck()
+          },
+        })
+      },
+      error: () => {
+        this.state = 'error'
+        this.cdr.markForCheck()
+      },
+    })
 
     setTimeout(() => {
-      this.state = 'loaded'
-      this.loadMore()
-    }, 600)
+      if (this.state === 'loading') {
+        this.state = 'error'
+        this.cdr.markForCheck()
+      }
+    }, 10000)
   }
 
   private loadMore(): void {

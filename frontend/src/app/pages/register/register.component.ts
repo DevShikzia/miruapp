@@ -466,7 +466,10 @@ export class RegisterComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loading = true
     this.generalError = ''
     this.auth.register(this.name, this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => {
+        const u = this.auth.user as { familyId?: string | null } | null
+        if (u?.familyId) { this.router.navigate(['/dashboard']) } else { this.router.navigate(['/familia']) }
+      },
       error: () => {
         this.loading = false
         this.generalError = 'No pudimos crear tu cuenta. Intentá de nuevo.'
@@ -479,7 +482,10 @@ export class RegisterComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loading = true
     this.generalError = ''
     this.auth.googleLogin(credential).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => {
+        const u = this.auth.user as { familyId?: string | null } | null
+        if (u?.familyId) { this.router.navigate(['/dashboard']) } else { this.router.navigate(['/familia']) }
+      },
       error: () => {
         this.loading = false
         this.generalError = 'No pudimos iniciar sesión con Google.'

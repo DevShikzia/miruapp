@@ -2,35 +2,57 @@ import { IncomeModel } from '../models/Income.model'
 import { ExpenseModel } from '../models/Expense.model'
 import { DebtModel } from '../models/Debt.model'
 import { SavingModel } from '../models/Saving.model'
-import { RecurringBillModel } from '../models/RecurringBill.model'
 import * as checklistService from './checklist.service'
 
 import type { IChecklistSummary } from '@shared/types/checklist.types'
 
 interface DashboardData {
+  balance: number
+  variationPercent: number
   totalIncomes: number
   totalExpenses: number
-  balance: number
-  pendingDebts: number
-  activeSavings: number
-  recurringBills: number
+  recentTransactions: Array<{
+    _id: string
+    name: string
+    amount: number
+    category: string
+    date: string
+    type: 'income' | 'expense'
+    isEssential: boolean
+  }>
+  debts: { active: number; total: number; paidPercent: number }
+  savingGoal?: { name: string; current: number; target: number }
   semaforo: 'verde' | 'amarillo' | 'rojo'
-  recentIncomes: Array<{ _id: string; amount: number; category: string; date: string }>
-  recentExpenses: Array<{ _id: string; amount: number; category: string; date: string; isEssential: boolean }>
   checklist: IChecklistSummary
+}
+
+async function getMonthTotals(familyId: string, year: number, month: number) {
+  const start = new Date(year, month, 1).toISOString().slice(0, 10)
+  const end = new Date(year, month + 1, 0).toISOString().slice(0, 10)
+  const [incomes, expenses] = await Promise.all([
+    IncomeModel.find({ familyId, date: { $gte: start, $lte: end } }),
+    ExpenseModel.find({ familyId, date: { $gte: start, $lte: end } }),
+  ])
+  return {
+    incomes: incomes.reduce((s, i) => s + i.amount, 0),
+    expenses: expenses.reduce((s, e) => s + e.amount, 0),
+  }
 }
 
 export async function getDashboard(familyId: string): Promise<DashboardData> {
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+  const year = now.getFullYear()
+  const month = now.getMonth()
 
-  const [incomes, expenses, debts, savings, bills, checklist] = await Promise.all([
+  const startOfMonth = new Date(year, month, 1).toISOString().slice(0, 10)
+  const endOfMonth = new Date(year, month + 1, 0).toISOString().slice(0, 10)
+
+  const [incomes, expenses, previous, debts, savings, checklist] = await Promise.all([
     IncomeModel.find({ familyId, date: { $gte: startOfMonth, $lte: endOfMonth } }),
     ExpenseModel.find({ familyId, date: { $gte: startOfMonth, $lte: endOfMonth } }),
-    DebtModel.find({ familyId, isPaid: false }),
+    getMonthTotals(familyId, year, month - 1),
+    DebtModel.find({ familyId }),
     SavingModel.find({ familyId }),
-    RecurringBillModel.find({ familyId, isActive: true }),
     checklistService.getOrCreate(familyId),
   ])
 
@@ -38,31 +60,57 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
   const balance = totalIncomes - totalExpenses
 
+  const variationPercent = previous.incomes > 0
+    ? Math.round(((totalIncomes - previous.incomes) / previous.incomes) * 100)
+    : totalIncomes > 0 ? 100 : 0
+
   let semaforo: 'verde' | 'amarillo' | 'rojo' = 'verde'
   if (balance < 0) semaforo = 'rojo'
   else if (balance < totalIncomes * 0.2) semaforo = 'amarillo'
 
-  return {
-    totalIncomes,
-    totalExpenses,
-    balance,
-    semaforo,
-    pendingDebts: debts.length,
-    activeSavings: savings.length,
-    recurringBills: bills.length,
-    recentIncomes: incomes.slice(-5).reverse().map((i) => ({
+  const recentTransactions = [
+    ...incomes.slice(-5).map(i => ({
       _id: i._id.toString(),
+      name: i.description || i.category,
       amount: i.amount,
       category: i.category,
       date: i.date,
+      type: 'income' as const,
+      isEssential: false,
     })),
-    recentExpenses: expenses.slice(-5).reverse().map((e) => ({
+    ...expenses.slice(-5).map(e => ({
       _id: e._id.toString(),
+      name: e.description || e.category,
       amount: e.amount,
       category: e.category,
       date: e.date,
+      type: 'expense' as const,
       isEssential: e.isEssential,
     })),
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10)
+
+  const totalDebtAmount = debts.reduce((s, d) => s + d.totalAmount, 0)
+  const totalPaid = debts.reduce((s, d) => s + d.payments.reduce((ps, p) => ps + p.amount, 0), 0)
+  const paidPercent = totalDebtAmount > 0 ? Math.round((totalPaid / totalDebtAmount) * 100) : 0
+
+  const sortedSavings = savings.sort((a, b) => a.deadline.localeCompare(b.deadline))
+  const savingGoal = sortedSavings.length > 0
+    ? { name: sortedSavings[0].name, current: sortedSavings[0].currentAmount, target: sortedSavings[0].targetAmount }
+    : undefined
+
+  return {
+    balance,
+    variationPercent,
+    totalIncomes,
+    totalExpenses,
+    recentTransactions,
+    debts: {
+      active: debts.filter(d => !d.isPaid).length,
+      total: totalDebtAmount,
+      paidPercent,
+    },
+    savingGoal,
+    semaforo,
     checklist: checklist.summary,
   }
 }

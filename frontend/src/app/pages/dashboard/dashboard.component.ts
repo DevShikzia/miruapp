@@ -1,4 +1,4 @@
-import { Component } from '@angular/core'
+import { Component, ChangeDetectorRef } from '@angular/core'
 import { Router, RouterLink } from '@angular/router'
 import { NgIf, NgFor, NgClass, DecimalPipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
@@ -13,42 +13,14 @@ interface Transaction {
   type: 'income' | 'expense'
 }
 
-interface DebtSummary {
-  active: number
-  total: number
-  paidPercent: number
-}
-
-interface SavingGoal {
-  name: string
-  current: number
-  target: number
-}
-
 interface DashboardData {
   balance: number
   variationPercent: number
-  incomes: number
-  expenses: number
+  totalIncomes: number
+  totalExpenses: number
   recentTransactions: Transaction[]
-  debts: DebtSummary
-  savingGoal?: SavingGoal
-}
-
-const MOCK_DATA: DashboardData = {
-  balance: 124500,
-  variationPercent: 15,
-  incomes: 380000,
-  expenses: 255500,
-  recentTransactions: [
-    { name: 'Sueldo Enero', category: 'Salario', date: 'Hoy', amount: 380000, type: 'income' },
-    { name: 'Supermercado', category: 'Alimentación', date: 'Hoy', amount: 45200, type: 'expense' },
-    { name: 'Netflix', category: 'Suscripciones', date: 'Ayer', amount: 8900, type: 'expense' },
-    { name: 'Freelance diseño', category: 'Trabajo', date: 'Ayer', amount: 45000, type: 'income' },
-    { name: 'Sube', category: 'Transporte', date: 'Ayer', amount: 3200, type: 'expense' },
-  ],
-  debts: { active: 3, total: 85000, paidPercent: 42 },
-  savingGoal: { name: 'Viaje a la costa', current: 45000, target: 120000 },
+  debts: { active: number; total: number; paidPercent: number }
+  savingGoal?: { name: string; current: number; target: number }
 }
 
 @Component({
@@ -84,7 +56,7 @@ const MOCK_DATA: DashboardData = {
         <div class="header-actions">
           <button class="icon-btn" (click)="onNotificationClick()">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-            <span class="badge" *ngIf="unreadNotifications">3</span>
+            <span class="badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
           </button>
           <button class="icon-btn" (click)="onProfileClick()">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
@@ -114,12 +86,12 @@ const MOCK_DATA: DashboardData = {
         <div class="summary-card income">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 4 4 4-4"/><path d="M12 8v7"/></svg>
           <span class="summary-label">Ingresos</span>
-          <span class="summary-amount">$ {{ data.incomes | number:'1.0-0' }}</span>
+          <span class="summary-amount">$ {{ data.totalIncomes | number:'1.0-0' }}</span>
         </div>
         <div class="summary-card expense">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V9"/></svg>
           <span class="summary-label">Gastos</span>
-          <span class="summary-amount">$ {{ data.expenses | number:'1.0-0' }}</span>
+          <span class="summary-amount">$ {{ data.totalExpenses | number:'1.0-0' }}</span>
         </div>
       </section>
 
@@ -141,7 +113,7 @@ const MOCK_DATA: DashboardData = {
           <div class="progress-fill" [style.width.%]="expenseRatio" [ngClass]="trafficColor"></div>
         </div>
         <div class="progress-labels">
-          <span>Gastado: $ {{ data.expenses | number:'1.0-0' }}</span>
+          <span>Gastado: $ {{ data.totalExpenses | number:'1.0-0' }}</span>
           <span>Disponible: $ {{ data.balance | number:'1.0-0' }}</span>
         </div>
       </section>
@@ -552,9 +524,16 @@ const MOCK_DATA: DashboardData = {
   `]
 })
 export class DashboardComponent {
-  state: 'loading' | 'loaded' | 'error' = 'loaded'
-  data: DashboardData = MOCK_DATA
-  unreadNotifications = true
+  state: 'loading' | 'loaded' | 'error' = 'loading'
+  data: DashboardData = {
+    balance: 0,
+    variationPercent: 0,
+    totalIncomes: 0,
+    totalExpenses: 0,
+    recentTransactions: [],
+    debts: { active: 0, total: 0, paidPercent: 0 },
+  }
+  unreadCount = 0
   fabOpen = false
 
   // Checklist
@@ -565,16 +544,27 @@ export class DashboardComponent {
   clAdding = false
   showAddTask = false
   newTaskName = ''
+
   showConfetti = false
   confettiPieces: Array<{ x: number; d: string; c: string }> = []
 
   constructor(
     private router: Router,
     private api: ApiService,
-  ) {
-    this.loadChecklist()
-  }
+    private cdr: ChangeDetectorRef,
+  ) {}
 
+  ngOnInit(): void {
+    this.loadDashboard()
+    this.loadUnreadCount()
+    this.loadChecklist()
+    setTimeout(() => {
+      if (this.state === 'loading') {
+        this.state = 'error'
+        this.cdr.markForCheck()
+      }
+    }, 10000)
+  }
   get monthName(): string {
     if (!this.clSummary.month) return ''
     const [y, m] = this.clSummary.month.split('-')
@@ -592,8 +582,40 @@ export class DashboardComponent {
     return item._id
   }
 
+  private loadDashboard(): void {
+    this.state = 'loading'
+    this.cdr.markForCheck()
+    this.api.get<DashboardData>('/dashboard')
+      .subscribe({
+        next: (res) => {
+          this.data = res.data
+          this.state = 'loaded'
+          this.cdr.markForCheck()
+        },
+        error: () => {
+          this.state = 'error'
+          this.cdr.markForCheck()
+        },
+      })
+  }
+
+  private loadUnreadCount(): void {
+    this.api.get<{ count: number }>('/notifications/unread-count')
+      .subscribe({
+        next: (res) => {
+          this.unreadCount = res.data.count
+          this.cdr.markForCheck()
+        },
+        error: () => {
+          this.unreadCount = 0
+          this.cdr.markForCheck()
+        },
+      })
+  }
+
   loadChecklist(): void {
     this.clState = 'loading'
+    this.cdr.markForCheck()
     this.api.get<IChecklistResponse>('/checklist')
       .subscribe({
         next: (res) => {
@@ -606,9 +628,11 @@ export class DashboardComponent {
             }
           }
           this.clState = 'loaded'
+          this.cdr.markForCheck()
         },
         error: () => {
           this.clState = 'error'
+          this.cdr.markForCheck()
         },
       })
   }
@@ -689,7 +713,8 @@ export class DashboardComponent {
   }
 
   get expenseRatio(): number {
-    return Math.round((this.data.expenses / this.data.incomes) * 100)
+    if (!this.data.totalIncomes) return 0
+    return Math.round((this.data.totalExpenses / this.data.totalIncomes) * 100)
   }
 
   get trafficColor(): string {
@@ -715,7 +740,7 @@ export class DashboardComponent {
 
   get trafficAmount(): string {
     const r = this.expenseRatio
-    const remaining = this.data.incomes - this.data.expenses
+    const remaining = this.data.totalIncomes - this.data.totalExpenses
     if (r < 60) return `+$ ${remaining.toLocaleString('es-AR')}`
     if (r <= 85) return `Restan $ ${remaining.toLocaleString('es-AR')}`
     return `-$ ${Math.abs(remaining).toLocaleString('es-AR')}`
@@ -727,7 +752,7 @@ export class DashboardComponent {
   }
 
   onNotificationClick(): void {
-    this.unreadNotifications = false
+    this.unreadCount = 0
   }
 
   onProfileClick(): void {

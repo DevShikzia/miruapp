@@ -375,7 +375,10 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.error = ''
     this.hasError = false
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => {
+        const u = this.auth.user as { familyId?: string | null } | null
+        if (u?.familyId) { this.router.navigate(['/dashboard']) } else { this.router.navigate(['/familia']) }
+      },
       error: () => {
         this.loading = false
         this.error = 'Email o contraseña incorrectos.'
@@ -389,7 +392,10 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loading = true
     this.error = ''
     this.auth.googleLogin(credential).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => {
+        const u = this.auth.user as { familyId?: string | null } | null
+        if (u?.familyId) { this.router.navigate(['/dashboard']) } else { this.router.navigate(['/familia']) }
+      },
       error: () => {
         this.loading = false
         this.error = 'No pudimos iniciar sesión con Google.'

@@ -151,7 +151,8 @@ export class SplashComponent implements OnInit {
       el?.classList.add('fade-out')
       setTimeout(() => {
         if (this.auth.isLoggedIn) {
-          this.router.navigate(['/dashboard'])
+          const u = this.auth.user as { familyId?: string | null } | null
+          if (u?.familyId) { this.router.navigate(['/dashboard']) } else { this.router.navigate(['/familia']) }
         } else if (!localStorage.getItem('onboarding_visto')) {
           this.router.navigate(['/onboarding'])
         } else {

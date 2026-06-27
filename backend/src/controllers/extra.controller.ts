@@ -13,15 +13,32 @@ function requireFamily(user: AuthRequest['user']): string {
 
 export async function getDashboard(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const data = await dashboardService.getDashboard(requireFamily(req.user))
+    if (!req.user?.familyId) {
+      sendSuccess(res, {
+        balance: 0,
+        variationPercent: 0,
+        totalIncomes: 0,
+        totalExpenses: 0,
+        recentTransactions: [],
+        debts: { active: 0, total: 0, paidPercent: 0 },
+        semaforo: 'verde',
+        checklist: { total: 0, completed: 0, percentage: 0, month: '', streak: 0 },
+      })
+      return
+    }
+    const data = await dashboardService.getDashboard(req.user.familyId)
     sendSuccess(res, data)
   } catch (error) { next(error) }
 }
 
 export async function getChecklist(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (!req.user?.familyId) {
+      sendSuccess(res, { items: [], summary: { total: 0, completed: 0, percentage: 0, month: '', streak: 0 } })
+      return
+    }
     const month = req.query.month as string | undefined
-    const data = await checklistService.getOrCreate(requireFamily(req.user), month)
+    const data = await checklistService.getOrCreate(req.user.familyId, month)
     sendSuccess(res, data)
   } catch (error) { next(error) }
 }

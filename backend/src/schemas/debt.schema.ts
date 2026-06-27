@@ -8,6 +8,9 @@ export const createDebtSchema = z.object({
   totalAmount: z.number().positive('El monto debe ser positivo'),
   description: z.string().max(200).optional().default(''),
   dueDate: z.string().regex(dateRegex, 'Formato de fecha inválido').optional().default(''),
+  installments: z.number().int().min(1).max(36).optional().default(1),
+  installmentAmount: z.number().positive().optional(),
+  interestRate: z.number().min(0).max(100).optional().default(0),
 })
 
 export const updateDebtSchema = z.object({
@@ -16,12 +19,16 @@ export const updateDebtSchema = z.object({
   description: z.string().max(200).optional(),
   dueDate: z.string().regex(dateRegex).optional(),
   isPaid: z.boolean().optional(),
+  installments: z.number().int().min(1).max(36).optional(),
+  installmentAmount: z.number().positive().optional(),
+  interestRate: z.number().min(0).max(100).optional(),
 })
 
 export const createPaymentSchema = z.object({
   amount: z.number().positive('El monto debe ser positivo'),
   date: z.string().regex(dateRegex, 'Formato de fecha inválido'),
   description: z.string().max(200).optional().default(''),
+  paidBy: z.string().optional().default(''),
 })
 
 export const updatePaymentSchema = z.object({

@@ -45,7 +45,7 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
 
 export async function addPayment(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const result = await debtService.addPayment(req.params.id, req.body, getFamilyId(req))
+    const result = await debtService.addPayment(req.params.id, req.body, getFamilyId(req), req.user!._id)
     sendSuccess(res, result, 'Pago registrado correctamente')
   } catch (error) { next(error) }
 }

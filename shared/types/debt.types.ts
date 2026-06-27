@@ -56,6 +56,8 @@ export interface PaymentData {
   amount: number
   date: string
   description: string
+  paidBy: string
+  paidByName: string
 }
 
 export interface DebtData {
@@ -70,7 +72,11 @@ export interface DebtData {
   paidAmount: number
   progress: number
   payments: PaymentData[]
+  installments: number
+  installmentAmount: number
+  interestRate: number
   createdBy: string
+  createdByName: string
   createdAt: string
 }
 
@@ -80,6 +86,9 @@ export interface CreateDebtRequest {
   totalAmount: number
   description?: string
   dueDate?: string
+  installments?: number
+  installmentAmount?: number
+  interestRate?: number
 }
 
 export interface UpdateDebtRequest {
@@ -88,12 +97,16 @@ export interface UpdateDebtRequest {
   description?: string
   dueDate?: string
   isPaid?: boolean
+  installments?: number
+  installmentAmount?: number
+  interestRate?: number
 }
 
 export interface CreatePaymentRequest {
   amount: number
   date: string
   description?: string
+  paidBy?: string
 }
 
 export interface UpdatePaymentRequest {

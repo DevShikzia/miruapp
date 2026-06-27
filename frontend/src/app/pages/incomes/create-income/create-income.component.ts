@@ -248,6 +248,7 @@ export class CreateIncomeComponent implements OnDestroy {
       amount: this.amount,
       category: this.category,
       description: this.description || undefined,
+      date: new Date().toISOString().split('T')[0],
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({

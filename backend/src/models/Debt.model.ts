@@ -8,6 +8,9 @@ export interface IDebtDocument extends Document {
   description: string
   dueDate: string
   isPaid: boolean
+  installments: number
+  installmentAmount: number
+  interestRate: number
   payments: Array<{
     amount: number
     date: string
@@ -25,10 +28,14 @@ const DebtSchema = new Schema<IDebtDocument>({
   description: { type: String, default: '' },
   dueDate: { type: String, default: '' },
   isPaid: { type: Boolean, default: false },
+  installments: { type: Number, default: 1, min: 1, max: 36 },
+  installmentAmount: { type: Number, default: 0 },
+  interestRate: { type: Number, default: 0, min: 0, max: 100 },
   payments: [{
     amount: { type: Number, required: true },
     date: { type: String, required: true },
     description: { type: String, default: '' },
+    paidBy: { type: String, default: '' },
   }],
   createdBy: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },

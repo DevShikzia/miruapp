@@ -38,6 +38,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/expenses/edit-expense/edit-expense.component').then(m => m.EditExpenseComponent),
   },
   {
+    path: 'deudas/crear',
+    loadComponent: () => import('./pages/debts/create-debt/create-debt.component').then(m => m.CreateDebtComponent),
+  },
+  {
+    path: 'deudas/editar/:id',
+    loadComponent: () => import('./pages/debts/edit-debt/edit-debt.component').then(m => m.EditDebtComponent),
+  },
+  {
+    path: 'deudas/:id',
+    loadComponent: () => import('./pages/debts/debt-detail/debt-detail.component').then(m => m.DebtDetailComponent),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),

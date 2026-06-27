@@ -357,6 +357,7 @@ export class CreateExpenseComponent implements OnDestroy {
       category: this.category,
       paymentType: this.paymentType,
       description: this.description || undefined,
+      date: new Date().toISOString().split('T')[0],
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({

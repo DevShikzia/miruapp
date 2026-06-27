@@ -5,8 +5,12 @@ export interface ISavingDocument extends Document {
   name: string
   targetAmount: number
   currentAmount: number
+  color: string
   deadline: string
   description: string
+  autoSave: boolean
+  autoSaveAmount: number | null
+  autoSaveDay: number | null
   contributions: Array<{
     amount: number
     date: string
@@ -20,8 +24,12 @@ const SavingSchema = new Schema<ISavingDocument>({
   name: { type: String, required: true, trim: true },
   targetAmount: { type: Number, required: true, min: 1 },
   currentAmount: { type: Number, default: 0, min: 0 },
+  color: { type: String, default: '#C99A0A' },
   deadline: { type: String, required: true },
   description: { type: String, default: '' },
+  autoSave: { type: Boolean, default: false },
+  autoSaveAmount: { type: Number, default: null },
+  autoSaveDay: { type: Number, default: null },
   contributions: [{
     amount: { type: Number, required: true, min: 0.01 },
     date: { type: String, required: true },

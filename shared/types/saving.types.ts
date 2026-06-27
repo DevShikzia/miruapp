@@ -56,8 +56,12 @@ export interface SavingData {
   name: string
   targetAmount: number
   currentAmount: number
+  color: SavingColor
   deadline: string
   description: string
+  autoSave: boolean
+  autoSaveAmount: number | null
+  autoSaveDay: number | null
   progress: number
   contributions: ContributionData[]
   createdBy: string
@@ -67,15 +71,23 @@ export interface SavingData {
 export interface CreateSavingRequest {
   name: string
   targetAmount: number
+  color?: SavingColor
   deadline: string
   description?: string
+  autoSave?: boolean
+  autoSaveAmount?: number
+  autoSaveDay?: number
 }
 
 export interface UpdateSavingRequest {
   name?: string
   targetAmount?: number
+  color?: SavingColor
   deadline?: string
   description?: string
+  autoSave?: boolean
+  autoSaveAmount?: number
+  autoSaveDay?: number
 }
 
 export interface AddContributionRequest {

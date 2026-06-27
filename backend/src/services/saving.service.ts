@@ -3,6 +3,7 @@ import {
   CreateSavingRequest, UpdateSavingRequest,
   AddContributionRequest,
   SavingData, ContributionData,
+  SavingColor,
 } from '@shared/types/saving.types'
 import { NotFoundError, BadRequestError } from '../utils/errors'
 
@@ -23,8 +24,12 @@ function toSavingData(doc: ISavingDocument): SavingData {
     name: doc.name,
     targetAmount: doc.targetAmount,
     currentAmount: current,
+    color: (doc.color || '#C99A0A') as SavingColor,
     deadline: doc.deadline,
     description: doc.description,
+    autoSave: doc.autoSave ?? false,
+    autoSaveAmount: doc.autoSaveAmount ?? null,
+    autoSaveDay: doc.autoSaveDay ?? null,
     progress: calcProgress(current, doc.targetAmount),
     contributions: doc.contributions.map(toContributionData),
     createdBy: doc.createdBy,

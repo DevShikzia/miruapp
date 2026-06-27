@@ -15,6 +15,7 @@ export interface IDebtDocument extends Document {
     amount: number
     date: string
     description: string
+    paidBy: string
   }>
   createdBy: string
   createdAt: Date

@@ -54,6 +54,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/savings/create-saving/create-saving.component').then(m => m.CreateSavingComponent),
   },
   {
+    path: 'ahorros/editar/:id',
+    loadComponent: () => import('./pages/savings/edit-saving/edit-saving.component').then(m => m.EditSavingComponent),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),

@@ -16,6 +16,7 @@ import type { SavingData, AddContributionRequest } from '@shared/types/saving.ty
       (touchstart)="onTouchStart($event)"
       (touchmove)="onTouchMove($event)"
       (touchend)="onTouchEnd()"
+      (click)="openMenuId = null"
     >
       <header class="header">
         <button class="btn-back" (click)="goBack()">
@@ -89,7 +90,17 @@ import type { SavingData, AddContributionRequest } from '@shared/types/saving.ty
                   <span class="goal-name">{{ goal.name }}</span>
                   <span class="goal-progress-text">$ {{ goal.currentAmount | number:'1.0-0' }} / $ {{ goal.targetAmount | number:'1.0-0' }}</span>
                 </div>
-                <span class="goal-badge-completed" *ngIf="goal.progress >= 100">Completada</span>
+                <div class="goal-right">
+                  <span class="goal-badge-completed" *ngIf="goal.progress >= 100">Completada</span>
+                  <div class="goal-menu-wrap" (click)="$event.stopPropagation()">
+                    <button class="goal-menu-btn" (click)="toggleMenu(goal._id)">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                    </button>
+                    <div class="goal-menu" *ngIf="openMenuId === goal._id">
+                      <button class="goal-menu-item" (click)="goEdit(goal._id); $event.stopPropagation()">Editar</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="goal-progress-row">
@@ -216,7 +227,13 @@ import type { SavingData, AddContributionRequest } from '@shared/types/saving.ty
     .goal-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
     .goal-name { font-size: 16px; font-weight: 600; color: #F0F2F5; }
     .goal-progress-text { font-size: 13px; font-weight: 500; color: #8A95A8; }
+    .goal-right { display: flex; align-items: center; gap: 8px; }
     .goal-badge-completed { font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 6px; background: rgba(21,196,140,0.15); color: #15C48C; flex-shrink: 0; }
+    .goal-menu-wrap { position: relative; }
+    .goal-menu-btn { background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center; }
+    .goal-menu { position: absolute; top: 100%; right: 0; margin-top: 4px; background: #1E2530; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px; z-index: 10; min-width: 100px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+    .goal-menu-item { display: block; width: 100%; background: none; border: none; padding: 8px 14px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; border-radius: 8px; }
+    .goal-menu-item:hover { background: rgba(255,255,255,0.05); }
 
     .goal-progress-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
     .goal-progress-row .progress-track { flex: 1; height: 8px; background: #1E2530; border-radius: 999px; overflow: hidden; }
@@ -275,6 +292,7 @@ export class SavingsComponent {
   contributeSaving = false
   contributeError = ''
 
+  openMenuId: string | null = null
   pullDistance = 0
   private pullStartY = 0
   private pulling = false
@@ -334,6 +352,15 @@ export class SavingsComponent {
 
   goDetail(id: string): void {
     // TODO: Navegar a detalle de meta
+  }
+
+  toggleMenu(id: string): void {
+    this.openMenuId = this.openMenuId === id ? null : id
+  }
+
+  goEdit(id: string): void {
+    this.openMenuId = null
+    this.router.navigate(['/ahorros/editar', id])
   }
 
   openContribute(goal: SavingData): void {

@@ -498,8 +498,20 @@ export class FamiliaComponent {
   }
 
   copyInviteCode(): void {
-    if (!this.family?.inviteCode) return
-    navigator.clipboard.writeText(this.family.inviteCode)
+    const code = this.family?.inviteCode
+    if (!code) return
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = code
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
     this.copied = true
     this.showInviteModal = true
     setTimeout(() => { this.copied = false }, 2000)

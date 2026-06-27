@@ -10,6 +10,7 @@ import familyRoutes from './routes/family.routes'
 import financeRoutes from './routes/finance.routes'
 import debtRoutes from './routes/debt.routes'
 import savingRoutes from './routes/saving.routes'
+import checklistRoutes from './routes/checklist.routes'
 import extraRoutes from './routes/extra.routes'
 import { initSocket } from './services/socket.service'
 import { startCronJobs } from './services/cron.service'
@@ -34,6 +35,7 @@ app.use('/api/family', familyRoutes)
 app.use('/api/finance', financeRoutes)
 app.use('/api/debts', debtRoutes)
 app.use('/api/savings', savingRoutes)
+app.use('/api/checklist', checklistRoutes)
 app.use('/api', extraRoutes)
 app.use(errorMiddleware)
 

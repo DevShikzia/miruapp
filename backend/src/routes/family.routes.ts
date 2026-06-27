@@ -10,6 +10,7 @@ const router = Router()
 router.use(authMiddleware)
 
 router.get('/my', familyController.getMyFamily)
+router.get('/balance', familyController.getBalance)
 router.post('/', validate(createFamilySchema), familyController.create)
 router.post('/join', validate(joinFamilySchema), familyController.join)
 router.post('/invite', requireFamilyRole('family_admin'), validate(inviteMemberSchema), familyController.invite)

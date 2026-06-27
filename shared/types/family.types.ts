@@ -48,6 +48,30 @@ export interface IFamilyBalance {
   netBalance: number
 }
 
+export interface MemberContribution {
+  userId: string
+  name: string
+  initials: string
+  avatarColor: string
+  totalIncome: number
+  totalExpense: number
+}
+
+export interface ActivityItem {
+  id: string
+  type: 'income' | 'expense' | 'debt' | 'saving'
+  action: string
+  userName: string
+  description: string
+  timestamp: string
+}
+
+export interface FamilyBalanceResponse {
+  balance: IFamilyBalance
+  members: MemberContribution[]
+  activity: ActivityItem[]
+}
+
 export interface IFamilyDetail {
   family: IFamily
   members: IMember[]

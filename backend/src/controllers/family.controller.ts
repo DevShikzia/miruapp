@@ -45,3 +45,10 @@ export async function removeMember(req: AuthRequest, res: Response, next: NextFu
     sendSuccess(res, result, 'Miembro eliminado correctamente')
   } catch (error) { next(error) }
 }
+
+export async function getBalance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await familyService.getFamilyBalance(req.user!.familyId!, req.user!._id)
+    sendSuccess(res, result)
+  } catch (error) { next(error) }
+}

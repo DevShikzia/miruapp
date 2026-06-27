@@ -16,7 +16,7 @@ import {
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  // legible: sin 0/O/I/1/L
-  return Array.from(crypto.randomBytes(6)).map(b => chars[b % 30]).join('')
+  return Array.from(crypto.randomBytes(8)).map(b => chars[b % 30]).join('')
 }
 
 function toFamilyData(family: IFamilyDocument): FamilyData {
@@ -60,6 +60,20 @@ export async function createFamily(data: ICreateFamilyRequest, creator: IUserPub
   })
 
   return toFamilyData(family)
+}
+
+export async function regenerateInvite(familyId: string): Promise<string> {
+  const family = await FamilyModel.findById(familyId)
+  if (!family) throw new NotFoundError('Familia no encontrada')
+
+  let inviteCode = generateInviteCode()
+  while (await FamilyModel.findOne({ inviteCode })) {
+    inviteCode = generateInviteCode()
+  }
+  family.inviteCode = inviteCode
+  await family.save()
+
+  return inviteCode
 }
 
 export async function inviteMember(familyId: string, data: { email: string; role: 'member' | 'readonly' }): Promise<FamilyData> {

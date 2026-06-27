@@ -289,10 +289,17 @@ import type { ICreateFamilyRequest, IJoinFamilyRequest } from '@shared/types/fam
           <h3 class="modal-title">Invitá a tu familia</h3>
           <p class="modal-text">Compartí este código con quien quieras invitar:</p>
           <div class="code-display">{{ family?.inviteCode }}</div>
-          <button class="btn-copy-code" (click)="copyInviteCode()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-            {{ copied ? '¡Copiado!' : 'Copiar código' }}
-          </button>
+          <div class="invite-actions">
+            <button class="btn-copy-code" (click)="copyInviteCode()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              {{ copied ? '¡Copiado!' : 'Copiar código' }}
+            </button>
+            <button class="btn-copy-code" (click)="regenerateInviteCode()" [disabled]="regenerating">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+              {{ regenerating ? 'Regenerando...' : 'Regenerar código' }}
+            </button>
+          </div>
+          <p class="form-error" *ngIf="regenerateError">{{ regenerateError }}</p>
           <button class="modal-close-btn" (click)="showInviteModal = false">Cerrar</button>
         </div>
       </div>
@@ -422,6 +429,7 @@ import type { ICreateFamilyRequest, IJoinFamilyRequest } from '@shared/types/fam
     .modal-title { font-size: 18px; font-weight: 700; color: #F0F2F5; margin: 0 0 8px; }
     .modal-text { font-size: 13px; font-weight: 400; color: #8A95A8; margin: 0 0 16px; }
     .code-display { font-size: 28px; font-weight: 800; color: #F0F2F5; letter-spacing: 8px; font-family: 'Courier New', monospace; padding: 16px; background: #161B24; border-radius: 16px; margin-bottom: 16px; }
+    .invite-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
     .btn-copy-code { width: 100%; height: 44px; background: #C99A0A; color: #0C0F14; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .modal-close-btn { width: 100%; height: 40px; margin-top: 8px; background: #161B24; color: #8A95A8; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
 
@@ -525,6 +533,8 @@ export class FamiliaComponent {
   removingMember = false
   createError = ''
   joinError = ''
+  regenerating = false
+  regenerateError = ''
   showCreateForm = false
   showJoinForm = false
   createName = ''
@@ -726,7 +736,10 @@ export class FamiliaComponent {
           this.creating = false
           this.showCreateForm = false
           this.createName = ''
-          if (this.family) this.loadBalance()
+          if (this.family) {
+            this.loadBalance()
+            this.auth.refreshToken().subscribe()
+          }
         },
         error: (err) => {
           this.creating = false
@@ -748,11 +761,33 @@ export class FamiliaComponent {
           this.joining = false
           this.showJoinForm = false
           this.joinCode = ''
-          if (this.family) this.loadBalance()
+          if (this.family) {
+            this.loadBalance()
+            this.auth.refreshToken().subscribe()
+          }
         },
         error: (err) => {
           this.joining = false
           this.joinError = err?.error?.message || 'Código inválido'
+          this.cdr.detectChanges()
+        },
+      })
+  }
+
+  regenerateInviteCode(): void {
+    if (!this.family || this.regenerating) return
+    this.regenerating = true
+    this.regenerateError = ''
+    this.api.post<{ inviteCode: string }>('/family/regenerate-invite', {})
+      .subscribe({
+        next: (res) => {
+          this.regenerating = false
+          this.family!.inviteCode = res.data.inviteCode
+          this.cdr.detectChanges()
+        },
+        error: (err) => {
+          this.regenerating = false
+          this.regenerateError = err?.error?.message || 'Error al regenerar'
           this.cdr.detectChanges()
         },
       })

@@ -45,6 +45,14 @@ export async function getMyFamily(req: AuthRequest, res: Response, next: NextFun
   } catch (error) { next(error) }
 }
 
+export async function regenerateInvite(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const familyId = requireFamily(req.user)
+    const code = await familyService.regenerateInvite(familyId)
+    sendSuccess(res, { inviteCode: code }, 'Código regenerado correctamente')
+  } catch (error) { next(error) }
+}
+
 export async function removeMember(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const familyId = requireFamily(req.user)

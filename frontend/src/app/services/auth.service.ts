@@ -102,6 +102,8 @@ export class AuthService {
       tap((res: any) => {
         localStorage.setItem(this.tokenKey, res.data.accessToken)
         localStorage.setItem(this.refreshKey, res.data.refreshToken)
+        const payload = JSON.parse(atob(res.data.accessToken.split('.')[1]))
+        this.userSubject.next(payload)
       })
     )
   }

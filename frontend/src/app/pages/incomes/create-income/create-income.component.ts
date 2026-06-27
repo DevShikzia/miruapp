@@ -41,14 +41,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   standalone: true,
   imports: [FormsModule, NgIf, NgFor],
   template: `
-    <div class="container">
+    <div class="container" [class.fade-out]="state === 'success'">
       <header class="header">
         <button class="btn-back" (click)="onBack()">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 class="title">Nuevo ingreso</h1>
         <button class="btn-save-header" [class.disabled]="!canSave" [disabled]="!canSave || state === 'saving'" (click)="onSave()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Guardar</span>
         </button>
       </header>
 
@@ -61,7 +62,7 @@ const CATEGORY_ICONS: Record<string, string> = {
             [value]="amountDisplay"
             name="amount"
             type="text"
-            inputmode="numeric"
+            inputmode="decimal"
             (input)="onAmountInput($event)"
             (focus)="onAmountFocus()"
             placeholder="0" (keydown)="onKeydown($event)"
@@ -107,9 +108,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 
       <button class="btn-save" [disabled]="!canSave || state === 'saving'" (click)="onSave()">
         <span *ngIf="state !== 'saving'">Guardar ingreso</span>
-          <span *ngIf="state === 'saving'" class="save-spinner">
-            <span class="spinner-sm"></span>
-          </span>
+        <span *ngIf="state === 'saving'" class="save-spinner">
+          <img src="/assets/miru-icon.svg" class="spinner-miru" alt="Cargando" />
+        </span>
       </button>
     </div>
   `,
@@ -118,10 +119,10 @@ const CATEGORY_ICONS: Record<string, string> = {
     .container { padding: 0 24px; max-width: 390px; margin: 0 auto; position: relative; min-height: 100vh; }
     ::-webkit-scrollbar { display: none; }
 
-    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 40px; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 56px; }
     .btn-back { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; margin-left: -4px; }
     .title { font-size: 20px; font-weight: 700; color: #F0F2F5; margin: 0; }
-    .btn-save-header { background: none; border: none; padding: 4px; cursor: pointer; color: #E4B3E9; transition: opacity 150ms; display: flex; align-items: center; }
+    .btn-save-header { background: none; border: none; padding: 4px; cursor: pointer; color: #E4B3E9; transition: opacity 150ms; display: flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; }
     .btn-save-header.disabled { opacity: 0.4; cursor: not-allowed; }
 
     .monto-section { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -136,7 +137,8 @@ const CATEGORY_ICONS: Record<string, string> = {
     .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .category-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 80px; background: #161B24; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; cursor: pointer; padding: 12px; transition: all 150ms; }
     .category-card:hover { background: rgba(255,255,255,0.04); }
-    .category-card.selected { border: 1.5px solid #E4B3E9; background: rgba(228,179,233,0.08); }
+    .category-card.selected { border: 1.5px solid #E4B3E9; background: rgba(228,179,233,0.08); animation: selectPop 200ms ease; }
+    @keyframes selectPop { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     .category-icon { display: flex; align-items: center; justify-content: center; }
     .category-label { font-size: 11px; font-weight: 400; color: #F0F2F5; text-align: center; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
@@ -150,7 +152,9 @@ const CATEGORY_ICONS: Record<string, string> = {
     .btn-save { width: 100%; height: 44px; margin-top: 28px; background: #15C48C; color: #041710; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 150ms; }
     .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
     .save-spinner { display: flex; align-items: center; }
-    .save-spinner .spinner-sm { width: 20px; height: 20px; }
+    .spinner-miru { width: 20px; height: 20px; animation: spin 800ms linear infinite; }
+
+    .fade-out { opacity: 0; transition: opacity 200ms ease; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
   `]
@@ -176,6 +180,16 @@ export class CreateIncomeComponent implements OnDestroy {
     return this.amount > 0 && this.category !== null
   }
 
+  private getRawNumeric(value: string): { intStr: string; decStr: string; hasComma: boolean } {
+    let raw = value.replace(/[^0-9,]/g, '')
+    const firstComma = raw.indexOf(',')
+    const hasComma = firstComma !== -1
+    let intStr = hasComma ? raw.substring(0, firstComma) : raw
+    let decStr = hasComma ? raw.substring(firstComma + 1).replace(/,/g, '').substring(0, 2) : ''
+    if (intStr.length > 1) intStr = intStr.replace(/^0+/, '')
+    return { intStr, decStr, hasComma }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next()
     this.destroy$.complete()
@@ -183,9 +197,19 @@ export class CreateIncomeComponent implements OnDestroy {
 
   onAmountInput(event: Event): void {
     const input = event.target as HTMLInputElement
-    const raw = input.value.replace(/[^0-9]/g, '')
-    this.amount = raw ? parseInt(raw, 10) : 0
-    this.amountDisplay = this.amount > 0 ? this.amount.toLocaleString('es-AR') : ''
+    const { intStr, decStr, hasComma } = this.getRawNumeric(input.value)
+
+    const numericStr = intStr === '' ? '0' : intStr
+    const fullNum = hasComma ? numericStr + '.' + (decStr || '0') : numericStr
+    this.amount = parseFloat(fullNum) || 0
+
+    const formattedInt = parseInt(numericStr, 10).toLocaleString('es-AR')
+    if (intStr === '' && !hasComma) {
+      this.amountDisplay = ''
+    } else {
+      this.amountDisplay = hasComma ? formattedInt + ',' + decStr : formattedInt
+    }
+
     input.value = this.amountDisplay
   }
 
@@ -193,7 +217,7 @@ export class CreateIncomeComponent implements OnDestroy {
     const allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
     if (allowed.includes(event.key)) return
     if ((event.ctrlKey || event.metaKey) && ['c', 'v', 'a', 'x'].includes(event.key.toLowerCase())) return
-    if (!/^\d$/.test(event.key)) { event.preventDefault() }
+    if (!/^[\d,]$/.test(event.key)) { event.preventDefault() }
   }
 
   onAmountFocus(): void {
@@ -229,7 +253,6 @@ export class CreateIncomeComponent implements OnDestroy {
       .subscribe({
         next: () => {
           this.state = 'success'
-          this.resetForm()
           setTimeout(() => {
             this.router.navigate(['/movimientos'])
           }, 200)

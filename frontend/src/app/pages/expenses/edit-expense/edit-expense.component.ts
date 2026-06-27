@@ -69,7 +69,7 @@ const PAYMENT_ICONS: Record<string, string> = {
         <button class="btn-save-header" [class.disabled]="!dirty" [disabled]="!dirty || state === 'saving'" (click)="onSave()">
           <span *ngIf="state !== 'saving'">Guardar</span>
           <span *ngIf="state === 'saving'" class="header-spinner">
-            <span class="spinner-sm"></span>
+            <img src="/assets/miru-icon.svg" class="spinner-miru" alt="Cargando" />
           </span>
         </button>
       </header>
@@ -91,7 +91,7 @@ const PAYMENT_ICONS: Record<string, string> = {
               [value]="amountDisplay"
               name="amount"
               type="text"
-              inputmode="numeric"
+              inputmode="decimal"
               (input)="onAmountInput($event)"
               (focus)="onAmountFocus()"
               placeholder="0" (keydown)="onKeydown($event)"
@@ -152,7 +152,7 @@ const PAYMENT_ICONS: Record<string, string> = {
         <button class="btn-save" [disabled]="!dirty || state === 'saving'" (click)="onSave()">
           <span *ngIf="state !== 'saving'">Guardar cambios</span>
           <span *ngIf="state === 'saving'" class="save-spinner">
-            <span class="spinner-sm"></span>
+            <img src="/assets/miru-icon.svg" class="spinner-miru" alt="Cargando" />
           </span>
         </button>
       </ng-container>
@@ -180,13 +180,14 @@ const PAYMENT_ICONS: Record<string, string> = {
     .container { padding: 0 24px; max-width: 390px; margin: 0 auto; position: relative; min-height: 100vh; }
     ::-webkit-scrollbar { display: none; }
 
-    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 40px; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding-top: 56px; }
     .btn-back { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; margin-left: -4px; }
     .title { font-size: 20px; font-weight: 700; color: #F0F2F5; margin: 0; }
     .btn-save-header { background: none; border: none; padding: 4px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #E05252; transition: opacity 150ms; display: flex; align-items: center; gap: 6px; }
     .btn-save-header.disabled { opacity: 0.4; cursor: not-allowed; }
     .header-spinner { display: flex; align-items: center; }
     .spinner-sm { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(228,179,233,0.2); border-top-color: #E4B3E9; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    .spinner-miru { width: 20px; height: 20px; animation: spin 800ms linear infinite; }
 
     .loading-state { padding-top: 32px; }
     .skeleton-monto { height: 72px; width: 200px; margin: 0 auto; background: #1E2530; border-radius: 12px; animation: shimmer 1.5s infinite; }
@@ -205,7 +206,7 @@ const PAYMENT_ICONS: Record<string, string> = {
     .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .category-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 80px; background: #161B24; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; cursor: pointer; padding: 12px; transition: all 150ms; }
     .category-card:hover { background: rgba(255,255,255,0.04); }
-    .category-card.selected { border: 1.5px solid #E05252; background: rgba(224,82,82,0.08); }
+    .category-card.selected { border: 1.5px solid #E05252; background: rgba(224,82,82,0.08); animation: selectPop 200ms ease; }
     .category-icon { display: flex; align-items: center; justify-content: center; }
     .category-label { font-size: 11px; font-weight: 400; color: #F0F2F5; text-align: center; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
@@ -224,7 +225,6 @@ const PAYMENT_ICONS: Record<string, string> = {
     .btn-save { width: 100%; height: 44px; margin-top: 24px; background: #E05252; color: #F0F2F5; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 150ms; }
     .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
     .save-spinner { display: flex; align-items: center; }
-    .save-spinner .spinner-sm { width: 20px; height: 20px; }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px; }
     .modal-card { background: #161B24; border-radius: 20px; padding: 24px; width: 100%; max-width: 320px; border: 1px solid rgba(255,255,255,0.06); }
@@ -239,6 +239,7 @@ const PAYMENT_ICONS: Record<string, string> = {
     .success-check { animation: scaleIn 200ms ease-out; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes selectPop { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -311,11 +312,31 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
       })
   }
 
+  private getRawNumeric(value: string): { intStr: string; decStr: string; hasComma: boolean } {
+    let raw = value.replace(/[^0-9,]/g, '')
+    const firstComma = raw.indexOf(',')
+    const hasComma = firstComma !== -1
+    let intStr = hasComma ? raw.substring(0, firstComma) : raw
+    let decStr = hasComma ? raw.substring(firstComma + 1).replace(/,/g, '').substring(0, 2) : ''
+    if (intStr.length > 1) intStr = intStr.replace(/^0+/, '')
+    return { intStr, decStr, hasComma }
+  }
+
   onAmountInput(event: Event): void {
     const input = event.target as HTMLInputElement
-    const raw = input.value.replace(/[^0-9]/g, '')
-    this.amount = raw ? parseInt(raw, 10) : 0
-    this.amountDisplay = this.amount > 0 ? this.amount.toLocaleString('es-AR') : ''
+    const { intStr, decStr, hasComma } = this.getRawNumeric(input.value)
+
+    const numericStr = intStr === '' ? '0' : intStr
+    const fullNum = hasComma ? numericStr + '.' + (decStr || '0') : numericStr
+    this.amount = parseFloat(fullNum) || 0
+
+    const formattedInt = parseInt(numericStr, 10).toLocaleString('es-AR')
+    if (intStr === '' && !hasComma) {
+      this.amountDisplay = ''
+    } else {
+      this.amountDisplay = hasComma ? formattedInt + ',' + decStr : formattedInt
+    }
+
     input.value = this.amountDisplay
   }
 
@@ -323,7 +344,7 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
     const allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
     if (allowed.includes(event.key)) return
     if ((event.ctrlKey || event.metaKey) && ['c', 'v', 'a', 'x'].includes(event.key.toLowerCase())) return
-    if (!/^\d$/.test(event.key)) { event.preventDefault() }
+    if (!/^[\d,]$/.test(event.key)) { event.preventDefault() }
   }
 
   onAmountFocus(): void {
@@ -334,7 +355,10 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
 
   private formatAmount(value: number): string {
     if (value === 0) return ''
-    return value.toLocaleString('es-AR')
+    const intPart = Math.floor(value)
+    const decPart = Math.round((value - intPart) * 100)
+    const formattedInt = intPart.toLocaleString('es-AR')
+    return decPart > 0 ? formattedInt + ',' + String(decPart).padStart(2, '0') : formattedInt
   }
 
   getCategoryIcon(name: string): SafeHtml {

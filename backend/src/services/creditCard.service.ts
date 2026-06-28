@@ -1,6 +1,9 @@
 import { CreditCardModel, ICreditCardDocument } from '../models/CreditCard.model'
 import { ExpenseModel } from '../models/Expense.model'
-import { CreateCreditCardRequest, UpdateCreditCardRequest, CreditCardData, CardStatement } from '@shared/types/credit-card.types'
+import { CardItemModel } from '../models/CardItem.model'
+import { CreateCreditCardRequest, UpdateCreditCardRequest, CreditCardData, CardStatement, CardStatementItem } from '@shared/types/credit-card.types'
+import { getTarjetaRate } from './rate.service'
+import * as cardItemService from './cardItem.service'
 import { NotFoundError } from '../utils/errors'
 
 function toData(doc: ICreditCardDocument): CreditCardData {
@@ -53,6 +56,23 @@ export async function remove(id: string, familyId: string): Promise<void> {
   if (result.deletedCount === 0) throw new NotFoundError('Tarjeta no encontrada')
 }
 
+function currentPeriod(card: ICreditCardDocument, refYear: number, refMonth: number): { periodStartStr: string; periodEndStr: string; dueDateStr: string } {
+  const periodStart = new Date(refYear, refMonth, card.closingDay + 1)
+  const periodEnd = new Date(refYear, refMonth + 1, card.closingDay)
+
+  const periodStartStr = periodStart.toISOString().slice(0, 10)
+  const periodEndStr = periodEnd.toISOString().slice(0, 10)
+
+  const dueDate = new Date(refYear, refMonth + 1, card.dueDay)
+  const dueDateStr = dueDate.toISOString().slice(0, 10)
+
+  return { periodStartStr, periodEndStr, dueDateStr }
+}
+
+function periodToYYYYMM(year: number, month: number): string {
+  return `${year}-${String(month + 1).padStart(2, '0')}`
+}
+
 export async function getStatement(cardId: string, familyId: string, month?: string): Promise<CardStatement> {
   const card = await CreditCardModel.findOne({ _id: cardId, familyId })
   if (!card) throw new NotFoundError('Tarjeta no encontrada')
@@ -61,22 +81,87 @@ export async function getStatement(cardId: string, familyId: string, month?: str
   const year = month ? parseInt(month.split('-')[0], 10) : now.getFullYear()
   const refMonth = month ? parseInt(month.split('-')[1], 10) - 1 : now.getMonth()
 
-  const periodStart = new Date(year, refMonth, card.closingDay + 1)
-  const periodEnd = new Date(year, refMonth + 1, card.closingDay)
+  const { periodStartStr, periodEndStr, dueDateStr } = currentPeriod(card, year, refMonth)
+  const currentPeriodYYYYMM = periodToYYYYMM(year, refMonth + 1)
 
-  const periodStartStr = periodStart.toISOString().slice(0, 10)
-  const periodEndStr = periodEnd.toISOString().slice(0, 10)
+  const [expenses, cardItems, currentRate] = await Promise.all([
+    ExpenseModel.find({
+      familyId,
+      creditCardId: cardId,
+      date: { $gte: periodStartStr, $lte: periodEndStr },
+    }).sort({ date: -1 }),
+    CardItemModel.find({ cardId, familyId, isActive: true }),
+    getTarjetaRate().catch(() => 1600),
+  ])
 
-  const dueDate = new Date(year, refMonth + 1, card.dueDay)
-  const dueDateStr = dueDate.toISOString().slice(0, 10)
+  const expenseItems: CardStatementItem[] = expenses.map(e => ({
+    _id: e._id.toString(),
+    amount: e.amount,
+    category: e.category,
+    description: e.description,
+    date: e.date,
+    createdBy: e.createdBy,
+    source: 'expense',
+    currency: (e.currency || 'ARS') as 'ARS' | 'USD',
+    amountUsd: e.amountUsd,
+  }))
 
-  const expenses = await ExpenseModel.find({
-    familyId,
-    creditCardId: cardId,
-    date: { $gte: periodStartStr, $lte: periodEndStr },
-  }).sort({ date: -1 })
+  const items: CardStatementItem[] = []
 
-  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0)
+  for (const item of cardItems) {
+    if (item.type === 'recurring') {
+      let amount = item.amount
+      let needsUpdate = false
+      let rateChange: number | undefined
+      if (item.currency === 'USD' && item.rateUsed && currentRate) {
+        const diff = Math.abs((currentRate - item.rateUsed) / item.rateUsed * 100)
+        needsUpdate = diff > 5
+        rateChange = Math.round(diff * 10) / 10
+      }
+      items.push({
+        _id: item._id.toString(),
+        amount,
+        category: item.category,
+        description: item.description,
+        date: periodStartStr,
+        createdBy: item.createdBy,
+        source: 'card_item',
+        itemType: 'recurring',
+        currency: item.currency as 'ARS' | 'USD',
+        amountUsd: item.amountUsd,
+        needsUpdate,
+        rateChange,
+        totalAmount: item.totalAmount,
+        totalInstallments: item.totalInstallments,
+        installmentManual: item.installmentManual,
+      })
+    } else if (item.type === 'installment') {
+      const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, item.totalInstallments || 1)
+      if (current !== null) {
+        const remaining = (item.totalInstallments || 1) - current
+        items.push({
+          _id: item._id.toString(),
+          amount: item.amount,
+          category: item.category,
+          description: item.description,
+          date: periodStartStr,
+          createdBy: item.createdBy,
+          source: 'card_item',
+          itemType: 'installment',
+          currency: item.currency as 'ARS' | 'USD',
+          amountUsd: item.amountUsd,
+          currentInstallment: current,
+          remainingInstallments: remaining,
+          totalAmount: item.totalAmount,
+          totalInstallments: item.totalInstallments,
+          installmentManual: item.installmentManual,
+        })
+      }
+    }
+  }
+
+  const expenseTotal = expenseItems.reduce((s, e) => s + e.amount, 0)
+  const itemsTotal = items.reduce((s, i) => s + i.amount, 0)
 
   return {
     cardId: card._id.toString(),
@@ -84,14 +169,10 @@ export async function getStatement(cardId: string, familyId: string, month?: str
     periodStart: periodStartStr,
     periodEnd: periodEndStr,
     dueDate: dueDateStr,
-    totalAmount,
-    expenses: expenses.map((e) => ({
-      _id: e._id.toString(),
-      amount: e.amount,
-      category: e.category,
-      description: e.description,
-      date: e.date,
-      createdBy: e.createdBy,
-    })),
+    totalAmount: expenseTotal + itemsTotal,
+    expenseTotal,
+    itemsTotal,
+    expenses: expenseItems,
+    items,
   }
 }

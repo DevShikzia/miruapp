@@ -71,25 +71,46 @@ import type { CreateDebtRequest } from '@shared/types/debt.types'
 
       <div class="field-section" *ngIf="debtType">
         <label class="field-label">Cuotas</label>
-        <div class="input-wrapper inline">
-          <input
-            class="text-input narrow"
-            [(ngModel)]="installments"
-            name="installments"
-            type="number"
-            min="1"
-            max="36"
-            placeholder="1"
-            (input)="onInstallmentsChange()"
-          />
-          <span class="inline-hint" *ngIf="installments > 0 && amount > 0">
-            {{ installments }} {{ installments === 1 ? 'cuota de' : 'cuotas de' }} $ {{ installmentAmount | number:'1.0-0' }}
-          </span>
+        <div class="split-inputs">
+          <div class="split-group">
+            <input
+              class="text-input center"
+              [(ngModel)]="installments"
+              name="installments"
+              type="number"
+              min="1"
+              max="36"
+              placeholder="1"
+              (input)="onInstallmentsChange()"
+            />
+            <span class="split-label">{{ installments === 1 ? 'cuota' : 'cuotas' }}</span>
+          </div>
+          <div class="split-sep">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+          </div>
+          <div class="split-group">
+            <input
+              class="text-input center"
+              [ngModel]="installmentAmount"
+              (ngModelChange)="onInstallmentAmountChange($event)"
+              name="installmentAmount"
+              type="text"
+              inputmode="decimal"
+              placeholder="$ 0"
+            />
+            <span class="split-label">c/u</span>
+          </div>
         </div>
+        <span class="field-hint" *ngIf="installments > 0 && amount > 0 && installmentAmount > 0">
+          Total: $ {{ (installmentAmount * installments) | number:'1.0-0' }}
+          <span *ngIf="(installmentAmount * installments) !== amount">
+            · Dif: $ {{ ((installmentAmount * installments) - amount) | number:'1.0-0' }}
+          </span>
+        </span>
       </div>
 
       <div class="field-section">
-        <label class="field-label">Próximo vencimiento</label>
+        <label class="field-label">Vencimiento (opcional)</label>
         <div class="input-wrapper">
           <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
           <input
@@ -177,6 +198,13 @@ import type { CreateDebtRequest } from '@shared/types/debt.types'
     .text-input:focus { outline: none; }
     .input-wrapper:focus-within { outline: 1px solid #E05252; }
 
+    .split-inputs { display: flex; align-items: center; gap: 4px; background: #1E2530; border-radius: 16px; height: 48px; padding: 0 8px; }
+    .split-group { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+    .split-sep { flex-shrink: 0; display: flex; align-items: center; opacity: 0.4; }
+    .split-label { font-size: 12px; font-weight: 500; color: #8A95A8; white-space: nowrap; }
+    .text-input.center { text-align: center; }
+    .field-hint { font-size: 11px; font-weight: 400; color: #697586; margin-top: 6px; padding-left: 4px; }
+
     .inline-hint { font-size: 13px; font-weight: 500; color: #8A95A8; white-space: nowrap; }
     .inline-hint.warn { color: #C99A0A; }
     .inline-suffix { font-size: 14px; font-weight: 500; color: #8A95A8; }
@@ -217,6 +245,8 @@ export class CreateDebtComponent implements OnDestroy {
   amountDisplay = ''
   debtType: 'fixed' | 'credit' | null = null
   installments = 1
+  installmentAmount = 0
+  installmentManual = false
   dueDate = ''
   interestRate = 0
   description = ''
@@ -228,9 +258,7 @@ export class CreateDebtComponent implements OnDestroy {
   constructor(
     private api: ApiService,
     private router: Router,
-  ) {
-    this.setDefaultDate()
-  }
+  ) {}
 
   get accentColor(): string {
     return this.isCreditor ? '#5B8DEF' : '#E05252'
@@ -239,14 +267,7 @@ export class CreateDebtComponent implements OnDestroy {
   get canSave(): boolean {
     if (!this.personName || this.personName.trim().length < 2) return false
     if (this.amount <= 0) return false
-    if (!this.dueDate) return false
-    if (this.debtType === 'credit' && this.interestRate <= 0) return false
     return true
-  }
-
-  get installmentAmount(): number {
-    if (this.installments <= 0 || this.amount <= 0) return 0
-    return Math.round(this.amount / this.installments)
   }
 
   get estimatedInterest(): number {
@@ -259,18 +280,20 @@ export class CreateDebtComponent implements OnDestroy {
     this.destroy$.complete()
   }
 
-  private setDefaultDate(): void {
-    const now = new Date()
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-    this.dueDate = nextMonth.toISOString().split('T')[0]
-  }
-
   toggleDirection(): void {
     this.isCreditor = !this.isCreditor
   }
 
   private getRawNumeric(value: string): string {
     return value.replace(/[^0-9]/g, '')
+  }
+
+  private calcInstallmentAmount(): void {
+    if (this.installments <= 0 || this.amount <= 0) {
+      this.installmentAmount = 0
+    } else {
+      this.installmentAmount = Math.round(this.amount / this.installments)
+    }
   }
 
   onAmountInput(event: Event): void {
@@ -280,6 +303,7 @@ export class CreateDebtComponent implements OnDestroy {
     const formatted = this.amount === 0 ? '' : this.amount.toLocaleString('es-AR')
     this.amountDisplay = formatted
     input.value = this.amountDisplay
+    if (!this.installmentManual) this.calcInstallmentAmount()
   }
 
   onAmountFocus(): void {
@@ -291,6 +315,14 @@ export class CreateDebtComponent implements OnDestroy {
   onInstallmentsChange(): void {
     if (this.installments < 1) this.installments = 1
     if (this.installments > 36) this.installments = 36
+    if (!this.installmentManual) this.calcInstallmentAmount()
+  }
+
+  onInstallmentAmountChange(value: string): void {
+    const raw = this.getRawNumeric(value)
+    const num = raw === '' ? 0 : parseInt(raw, 10)
+    this.installmentAmount = num
+    this.installmentManual = num > 0
   }
 
   onInterestChange(): void {
@@ -310,7 +342,7 @@ export class CreateDebtComponent implements OnDestroy {
       type: this.isCreditor ? 'creditor' : 'debtor',
       personName: this.personName.trim(),
       totalAmount: this.amount,
-      dueDate: this.dueDate,
+      dueDate: this.dueDate || undefined,
       description: this.description.trim() || undefined,
       installments: this.debtType ? this.installments : 1,
       installmentAmount: this.debtType ? this.installmentAmount : 0,

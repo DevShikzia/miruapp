@@ -1,14 +1,17 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core'
 import { Router, ActivatedRoute, RouterLink } from '@angular/router'
 import { NgIf, NgFor, DecimalPipe } from '@angular/common'
+import { FormsModule } from '@angular/forms'
 import { Subject, takeUntil } from 'rxjs'
 import { TarjetasService } from '../../../services/tarjetas.service'
-import type { CreditCardData, CardStatement } from '@shared/types/credit-card.types'
+import { CardItemService } from '../../../services/card-item.service'
+import type { CreditCardData, CardStatement, CardStatementItem } from '@shared/types/credit-card.types'
+import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@shared/types/card-item.types'
 
 @Component({
   selector: 'app-detalle-tarjeta',
   standalone: true,
-  imports: [NgIf, NgFor, DecimalPipe, RouterLink],
+  imports: [NgIf, NgFor, DecimalPipe, RouterLink, FormsModule],
   template: `
     <div class="container">
       <header class="header">
@@ -99,12 +102,169 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
                   <span class="expense-date">{{ exp.date }}</span>
                 </div>
               </div>
-              <span class="expense-amount">$ {{ exp.amount | number:'1.0-0':'es-AR' }}</span>
+              <span class="expense-amount">
+                <span *ngIf="exp.currency === 'USD'" class="usd-badge">USD</span>
+                $ {{ exp.amount | number:'1.0-0':'es-AR' }}
+              </span>
             </div>
           </div>
 
-          <div class="empty-expenses" *ngIf="statement.expenses.length === 0">
+          <div class="items-section" *ngIf="statement.items.length > 0">
+            <div class="items-divider">
+              <span class="items-divider-label">Items activos</span>
+              <span class="items-divider-total">$ {{ statement.itemsTotal | number:'1.0-0':'es-AR' }}</span>
+            </div>
+            <div class="expense-list">
+              <div class="expense-item" *ngFor="let item of statement.items">
+                <div class="expense-left">
+                  <span class="expense-category-icon">{{ getCategoryEmoji(item.category) }}</span>
+                  <div class="expense-info">
+                    <span class="expense-desc">
+                      {{ item.description }}
+                      <span class="item-badge" *ngIf="item.itemType === 'recurring'">recurrente</span>
+                      <span class="item-badge badge-cuota" *ngIf="item.itemType === 'installment'">
+                        {{ item.currentInstallment }}/{{ item.currentInstallment! + (item.remainingInstallments ?? 0) }}
+                      </span>
+                    </span>
+                    <span class="expense-date" *ngIf="item.needsUpdate">
+                      <span class="rate-warning">
+                        \u26A0 D\u00f3lar subi\u00f3 {{ item.rateChange }}%
+                      </span>
+                    </span>
+                  </div>
+                </div>
+                <div class="expense-right">
+                  <span class="expense-amount">
+                    <span *ngIf="item.currency === 'USD'" class="usd-badge">USD</span>
+                    $ {{ item.amount | number:'1.0-0':'es-AR' }}
+                  </span>
+                  <button class="item-edit" (click)="openItemForm(item)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  </button>
+                  <button class="item-delete" (click)="deleteItem(item._id)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-expenses" *ngIf="statement.expenses.length === 0 && statement.items.length === 0">
             No hay gastos en este ciclo
+          </div>
+        </div>
+
+        <button class="btn-add-item" (click)="openItemForm()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          Agregar item
+        </button>
+
+        <div class="modal-overlay" *ngIf="showItemForm" (click)="closeItemForm()">
+          <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <span class="modal-title">{{ editingItemId ? 'Editar item' : 'Nuevo item' }}</span>
+              <button class="modal-close" (click)="closeItemForm()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Descripci\u00f3n</label>
+              <input class="form-input" [(ngModel)]="itemForm.description" name="desc" placeholder="Ej: Netflix" />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Categor\u00eda</label>
+              <select class="form-input" [(ngModel)]="itemForm.category" name="cat">
+                <option value="entertainment">Entretenimiento</option>
+                <option value="utilities">Servicios</option>
+                <option value="transport">Transporte</option>
+                <option value="health">Salud</option>
+                <option value="education">Educaci\u00f3n</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field flex1">
+                <label class="form-label">Tipo</label>
+                <select class="form-input" [(ngModel)]="itemForm.type" name="type" (change)="onItemTypeChange()">
+                  <option value="recurring">Recurrente</option>
+                  <option value="installment">Cuotas</option>
+                </select>
+              </div>
+              <div class="form-field flex1">
+                <label class="form-label">Moneda</label>
+                <select class="form-input" [(ngModel)]="itemForm.currency" name="currency" (change)="onCurrencyChange()">
+                  <option value="ARS">ARS</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field" *ngIf="itemForm.type === 'installment' && itemForm.currency !== 'USD'">
+              <label class="form-label">{{ installmentInputMode === 'cuota' ? 'Valor cuota' : 'Total financiado' }}</label>
+              <div class="installment-row">
+                <div class="installment-input-wrap">
+                  <span class="installment-prefix">{{ installmentInputMode === 'cuota' ? '$' : '$' }}</span>
+                  <input *ngIf="installmentInputMode === 'total'" class="installment-input" [value]="itemForm.totalAmount" (input)="onTotalChange(+$any($event.target).value)" type="text" inputmode="decimal" placeholder="0" />
+                  <input *ngIf="installmentInputMode === 'cuota'" class="installment-input" [value]="itemForm.amount" (input)="onCuotaChange(+$any($event.target).value)" type="text" inputmode="decimal" placeholder="0" />
+                </div>
+                <span class="installment-x">x</span>
+                <div class="installment-input-wrap short">
+                  <input class="installment-input" [value]="itemForm.totalInstallments" (input)="onInstallmentsChange(+$any($event.target).value)" type="number" min="1" max="60" placeholder="12" />
+                  <span class="installment-suffix">cuotas</span>
+                </div>
+              </div>
+              <div class="installment-calc" *ngIf="((itemForm.totalAmount ?? 0) > 0 || (itemForm.amount ?? 0) > 0) && (itemForm.totalInstallments ?? 0) > 0">
+                <span class="calc-label">{{ installmentInputMode === 'total' ? '= $ ' : 'Total: $ ' }}{{ installmentInputMode === 'total' ? (calculatedCuota | number:'1.0-0':'es-AR') : (((itemForm.amount ?? 0) * (itemForm.totalInstallments ?? 1)) | number:'1.0-0':'es-AR') }} {{ installmentInputMode === 'total' ? 'por cuota' : '' }}</span>
+                <span class="calc-toggle" (click)="toggleInstallmentMode()">
+                  {{ installmentInputMode === 'total' ? 'Ingresás por cuota' : 'Ingresás por total' }}
+                </span>
+              </div>
+              <div class="installment-calc" *ngIf="hasRoundDiff">
+                <span class="calc-warning">Total real: $ {{ realTotal | number:'1.0-0':'es-AR' }}</span>
+              </div>
+            </div>
+
+            <div class="form-field" *ngIf="itemForm.type === 'installment' && itemForm.currency === 'USD'">
+              <label class="form-label">{{ installmentInputMode === 'cuota' ? 'Valor cuota USD' : 'Total USD' }}</label>
+              <div class="installment-row">
+                <div class="installment-input-wrap">
+                  <span class="installment-prefix">USD</span>
+                  <input *ngIf="installmentInputMode === 'total'" class="installment-input" [value]="itemForm.totalAmount" (input)="onTotalChange(+$any($event.target).value)" type="text" inputmode="decimal" placeholder="0" />
+                  <input *ngIf="installmentInputMode === 'cuota'" class="installment-input" [value]="itemForm.amountUsd" (input)="onCuotaChangeUSD(+$any($event.target).value)" type="text" inputmode="decimal" placeholder="0" />
+                </div>
+                <span class="installment-x">x</span>
+                <div class="installment-input-wrap short">
+                  <input class="installment-input" [value]="itemForm.totalInstallments" (input)="onInstallmentsChange(+$any($event.target).value)" type="number" min="1" max="60" placeholder="12" />
+                  <span class="installment-suffix">cuotas</span>
+                </div>
+              </div>
+              <div class="amount-rate" *ngIf="currentRate && ((itemForm.totalAmount ?? 0) > 0 || ((itemForm.amountUsd ?? 0) > 0))">
+                {{ installmentInputMode === 'total' ? 'Total ARS: $ ' : 'Valor cuota ARS: $ ' }}{{ installmentInputMode === 'total' ? (((itemForm.totalAmount ?? 0) * currentRate) | number:'1.0-0':'es-AR') : (((itemForm.amountUsd ?? 0) * currentRate) | number:'1.0-0':'es-AR') }} (~{{ installmentInputMode === 'total' ? (( ((itemForm.totalAmount ?? 0) * currentRate) / (itemForm.totalInstallments ?? 1)) | number:'1.0-0':'es-AR') : ((itemForm.amountUsd ?? 0) * currentRate | number:'1.0-0':'es-AR') }}/cuota)
+              </div>
+            </div>
+
+            <div class="form-field" *ngIf="itemForm.type !== 'installment'">
+              <label class="form-label">{{ itemForm.currency === 'USD' ? 'Monto USD' : 'Monto' }}</label>
+              <div class="amount-row">
+                <input *ngIf="itemForm.currency === 'USD'" class="form-input flex1" [ngModel]="itemForm.amountUsd" (ngModelChange)="onItemAmountChange($event)" name="amountUsd" type="text" inputmode="decimal" placeholder="0" />
+                <input *ngIf="itemForm.currency !== 'USD'" class="form-input flex1" [ngModel]="itemForm.amount" (ngModelChange)="onItemAmountChange($event)" name="amount" type="text" inputmode="decimal" placeholder="0" />
+                <span class="amount-rate" *ngIf="itemForm.currency === 'USD' && currentRate && itemForm.amountUsd">
+                  x {{ currentRate | number:'1.0-0':'es-AR' }} = $ {{ (itemForm.amountUsd * currentRate) | number:'1.0-0':'es-AR' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Inicia</label>
+              <input class="form-input" [(ngModel)]="itemForm.startPeriod" name="start" type="datetime-local" />
+            </div>
+
+            <button class="btn-save-item" [disabled]="!canSaveItem" (click)="saveItem()">
+              {{ editingItemId ? 'Guardar cambios' : 'Agregar item' }}
+            </button>
           </div>
         </div>
       </ng-container>
@@ -117,7 +277,7 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
     </div>
   `,
   styles: [`
-    :host { display: block; min-height: 100vh; background: #0C0F14; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    :host { display: block; min-height: 100vh; background: #0C0F14; font-family: 'Inter', sans-serif; }
     .container { padding: 0 20px; max-width: 390px; margin: 0 auto; position: relative; min-height: 100vh; }
     ::-webkit-scrollbar { display: none; }
 
@@ -165,16 +325,67 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
 
     .expense-list { display: flex; flex-direction: column; gap: 8px; }
     .expense-item { display: flex; align-items: center; justify-content: space-between; background: #161B24; border-radius: 12px; padding: 12px 16px; }
-    .expense-left { display: flex; align-items: center; gap: 10px; }
-    .expense-category-icon { font-size: 16px; }
-    .expense-info { display: flex; flex-direction: column; gap: 2px; }
-    .expense-desc { font-size: 14px; font-weight: 500; color: #F0F2F5; }
+    .expense-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .expense-category-icon { font-size: 16px; flex-shrink: 0; }
+    .expense-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .expense-desc { font-size: 14px; font-weight: 500; color: #F0F2F5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
     .expense-date { font-size: 11px; font-weight: 400; color: #697586; }
-    .expense-amount { font-size: 14px; font-weight: 700; color: #F0F2F5; }
+    .expense-amount { font-size: 14px; font-weight: 700; color: #F0F2F5; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+    .expense-right { display: flex; align-items: center; gap: 8px; }
+    .usd-badge { font-size: 10px; font-weight: 700; color: #22C55E; background: rgba(34,197,94,0.12); padding: 2px 6px; border-radius: 4px; }
+    .item-badge { font-size: 10px; font-weight: 600; color: #697586; background: #1E2530; padding: 2px 8px; border-radius: 999px; }
+    .badge-cuota { color: #5B8DEF; background: rgba(91,141,239,0.12); }
+    .rate-warning { color: #C99A0A; font-size: 11px; font-weight: 500; }
+    .item-delete { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; opacity: 0.4; transition: opacity 150ms; }
+    .item-delete:hover { opacity: 1; }
+    .item-edit { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; opacity: 0.4; transition: opacity 150ms; }
+    .item-edit:hover { opacity: 1; }
+
+    .installment-row { display: flex; align-items: center; gap: 10px; }
+    .installment-input-wrap { display: flex; align-items: center; background: #1E2530; border-radius: 12px; height: 44px; padding: 0 12px; flex: 1; }
+    .installment-input-wrap.short { flex: 0 0 auto; max-width: 110px; }
+    .installment-prefix { font-size: 14px; font-weight: 500; color: #8A95A8; margin-right: 6px; white-space: nowrap; }
+    .installment-suffix { font-size: 12px; font-weight: 500; color: #8A95A8; margin-left: 6px; white-space: nowrap; }
+    .installment-input { background: transparent; border: none; outline: none; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; width: 100%; padding: 0; }
+    .installment-input::placeholder { color: #697586; }
+    .installment-x { font-size: 14px; font-weight: 500; color: #8A95A8; }
+    .installment-calc { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; flex-wrap: wrap; gap: 4px; }
+    .calc-label { font-size: 13px; font-weight: 600; color: #F0F2F5; }
+    .calc-toggle { font-size: 11px; font-weight: 500; color: #5B8DEF; cursor: pointer; }
+    .calc-warning { font-size: 11px; font-weight: 400; color: #697586; }
+
+    .items-section { margin-top: 16px; }
+    .items-divider { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+    .items-divider-label { font-size: 13px; font-weight: 600; color: #8A95A8; }
+    .items-divider-total { font-size: 13px; font-weight: 700; color: #8A95A8; }
+
     .empty-expenses { text-align: center; font-size: 13px; font-weight: 400; color: #697586; padding: 24px 0; }
+
+    .btn-add-item { width: 100%; height: 44px; margin: 16px 0 40px; background: #1E2530; border: 1px dashed #697586; border-radius: 12px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 150ms; }
+    .btn-add-item:hover { border-color: #E4B3E9; color: #E4B3E9; }
 
     .error-msg { display: flex; align-items: center; justify-content: center; gap: 8px; color: #F87171; font-size: 12px; margin-top: 60px; }
     .btn-retry { background: none; border: none; color: #5B8DEF; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+    .modal-card { background: #161B24; border-radius: 20px; padding: 24px; width: 100%; max-width: 360px; border: 1px solid rgba(255,255,255,0.06); max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; color: #F0F2F5; }
+    .modal-close { background: none; border: none; padding: 4px; cursor: pointer; display: flex; }
+
+    .form-field { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 12px; font-weight: 500; color: #8A95A8; margin-bottom: 6px; }
+    .form-input { width: 100%; height: 44px; background: #1E2530; border: none; border-radius: 12px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; padding: 0 14px; outline: none; box-sizing: border-box; }
+    .form-input:focus { outline: 1px solid #E4B3E9; }
+    .form-input::placeholder { color: #697586; }
+    select.form-input { appearance: none; cursor: pointer; }
+    .form-row { display: flex; gap: 10px; }
+    .flex1 { flex: 1; }
+    .amount-row { display: flex; flex-direction: column; gap: 4px; }
+    .amount-rate { font-size: 12px; font-weight: 500; color: #8A95A8; padding-left: 4px; }
+
+    .btn-save-item { width: 100%; height: 44px; background: #E05252; border: none; border-radius: 999px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 150ms; }
+    .btn-save-item:disabled { opacity: 0.4; cursor: not-allowed; }
 
     @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
   `]
@@ -184,10 +395,29 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
   card: CreditCardData | null = null
   statement: CardStatement | null = null
   state: 'loading' | 'loaded' | 'error' = 'loading'
+  showItemForm = false
+  editingItemId: string | null = null
+  currentRate = 1600
+  installmentInputMode: 'total' | 'cuota' = 'total'
+
+  itemForm: CreateCardItemRequest & { installmentManual?: boolean } = {
+    cardId: '',
+    description: '',
+    category: 'entertainment',
+    type: 'recurring',
+    currency: 'ARS',
+    amount: 0,
+    totalAmount: 0,
+    totalInstallments: 1,
+    installmentManual: false,
+    startPeriod: '',
+  }
+
   private destroy$ = new Subject<void>()
 
   constructor(
     private tarjetasService: TarjetasService,
+    private cardItemService: CardItemService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
@@ -196,6 +426,7 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.cardId = params['id']
+      this.itemForm.cardId = this.cardId
       this.loadData()
     })
   }
@@ -216,6 +447,32 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
     return '#5B8DEF'
   }
 
+  get canSaveItem(): boolean {
+    if (!this.itemForm.description || !this.itemForm.startPeriod) return false
+    if (this.itemForm.type === 'installment') {
+      return (this.itemForm.totalAmount ?? 0) > 0 && (this.itemForm.totalInstallments ?? 0) > 0
+    }
+    return this.itemForm.amount > 0
+  }
+
+  get calculatedCuota(): number {
+    const total = this.itemForm.totalAmount ?? 0
+    const inst = this.itemForm.totalInstallments ?? 1
+    if (inst <= 0) return 0
+    return Math.round(total / inst)
+  }
+
+  get realTotal(): number {
+    const cuota = this.itemForm.amount ?? 0
+    const inst = this.itemForm.totalInstallments ?? 1
+    return cuota * inst
+  }
+
+  get hasRoundDiff(): boolean {
+    const total = this.itemForm.totalAmount ?? 0
+    return total > 0 && Math.abs(this.realTotal - total) > 1
+  }
+
   loadData(): void {
     this.state = 'loading'
     this.tarjetasService.getById(this.cardId)
@@ -224,12 +481,24 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
         next: (card) => {
           this.card = card
           this.cdr.markForCheck()
+          this.loadRate()
           this.loadStatement()
         },
         error: () => {
           this.state = 'error'
           this.cdr.markForCheck()
         },
+      })
+  }
+
+  private loadRate(): void {
+    this.cardItemService.getRate()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.currentRate = res.rate
+        },
+        error: () => {},
       })
   }
 
@@ -250,6 +519,215 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
       })
   }
 
+  openItemForm(item?: CardStatementItem): void {
+    const now = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const isoLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+
+    if (item) {
+      this.editingItemId = item._id
+      this.itemForm = {
+        cardId: this.cardId,
+        description: item.description,
+        category: item.category,
+        type: item.itemType as 'installment' | 'recurring',
+        currency: item.currency ?? 'ARS',
+        amount: item.amount,
+        amountUsd: undefined,
+        totalAmount: item.totalAmount ?? item.amount,
+        totalInstallments: item.totalInstallments ?? 1,
+        installmentManual: item.installmentManual ?? false,
+        startPeriod: isoLocal,
+      }
+      this.installmentInputMode = item.installmentManual ? 'cuota' : 'total'
+    } else {
+      this.editingItemId = null
+      this.itemForm = {
+        cardId: this.cardId,
+        description: '',
+        category: 'entertainment',
+        type: 'recurring',
+        currency: 'ARS',
+        amount: 0,
+        totalAmount: 0,
+        totalInstallments: 1,
+        installmentManual: false,
+        startPeriod: isoLocal,
+      }
+      this.installmentInputMode = 'total'
+    }
+    this.showItemForm = true
+  }
+
+  closeItemForm(): void {
+    this.showItemForm = false
+  }
+
+  onItemTypeChange(): void {
+    if (this.itemForm.type === 'installment') {
+      this.itemForm.totalInstallments = this.itemForm.totalInstallments || 12
+      this.itemForm.totalAmount = this.itemForm.totalAmount || this.itemForm.amount || 0
+      this.recalcFromMode()
+    } else {
+      this.itemForm.totalInstallments = undefined
+      this.itemForm.totalAmount = undefined
+      this.itemForm.installmentManual = undefined
+    }
+  }
+
+  private recalcFromMode(): void {
+    if (this.installmentInputMode === 'cuota') {
+      this.itemForm.totalAmount = this.itemForm.amount * (this.itemForm.totalInstallments || 1)
+      this.itemForm.installmentManual = true
+    } else {
+      this.itemForm.amount = this.calculatedCuota
+      this.itemForm.installmentManual = false
+    }
+  }
+
+  onTotalChange(value: number): void {
+    this.itemForm.totalAmount = value
+    this.installmentInputMode = 'total'
+    this.itemForm.installmentManual = false
+    if (this.itemForm.currency === 'USD') {
+      this.itemForm.amountUsd = value
+      this.itemForm.amount = Math.round(value * this.currentRate)
+    } else {
+      this.itemForm.amount = this.calculatedCuota
+    }
+  }
+
+  onInstallmentsChange(value: number): void {
+    this.itemForm.totalInstallments = value
+    if (this.installmentInputMode === 'cuota') {
+      this.itemForm.totalAmount = this.itemForm.amount * value
+    } else {
+      this.itemForm.amount = this.calculatedCuota
+      if (this.itemForm.currency === 'USD') {
+        this.itemForm.amountUsd = this.itemForm.totalAmount
+      }
+    }
+  }
+
+  onCuotaChange(value: number): void {
+    this.itemForm.amount = value
+    this.installmentInputMode = 'cuota'
+    this.itemForm.installmentManual = true
+    this.itemForm.totalAmount = value * (this.itemForm.totalInstallments || 1)
+  }
+
+  onCuotaChangeUSD(value: number): void {
+    this.itemForm.amountUsd = value
+    this.itemForm.amount = Math.round(value * this.currentRate)
+    this.installmentInputMode = 'cuota'
+    this.itemForm.installmentManual = true
+    this.itemForm.totalAmount = value * (this.itemForm.totalInstallments || 1)
+  }
+
+  toggleInstallmentMode(): void {
+    this.installmentInputMode = this.installmentInputMode === 'total' ? 'cuota' : 'total'
+    if (this.installmentInputMode === 'cuota') {
+      this.itemForm.amount = this.calculatedCuota
+      this.itemForm.installmentManual = true
+      if (this.itemForm.currency === 'USD') {
+        this.itemForm.amountUsd = this.itemForm.totalAmount
+      }
+    } else {
+      this.itemForm.totalAmount = this.itemForm.amount * (this.itemForm.totalInstallments || 1)
+      this.itemForm.installmentManual = false
+      if (this.itemForm.currency === 'USD') {
+        this.itemForm.amountUsd = this.itemForm.totalAmount
+        this.itemForm.amount = Math.round(this.itemForm.totalAmount * this.currentRate)
+      }
+    }
+  }
+
+  onCurrencyChange(): void {
+    if (this.itemForm.type === 'installment') {
+      if (this.itemForm.currency === 'USD') {
+        if (this.installmentInputMode === 'cuota') {
+          this.itemForm.amountUsd = this.itemForm.amount
+          this.itemForm.amount = Math.round(this.itemForm.amount * this.currentRate)
+          this.itemForm.totalAmount = (this.itemForm.amountUsd ?? 0) * (this.itemForm.totalInstallments || 1)
+        } else {
+          this.itemForm.amountUsd = this.itemForm.totalAmount ?? 0
+          this.itemForm.amount = Math.round((this.itemForm.totalAmount ?? 0) * this.currentRate)
+        }
+      } else {
+        if (this.installmentInputMode === 'cuota') {
+          this.itemForm.amount = this.itemForm.amountUsd ?? 0
+          this.itemForm.totalAmount = (this.itemForm.amount ?? 0) * (this.itemForm.totalInstallments || 1)
+        } else {
+          this.itemForm.amount = this.calculatedCuota
+        }
+        this.itemForm.amountUsd = undefined
+      }
+    } else {
+      if (this.itemForm.currency === 'USD' && this.itemForm.amount > 0) {
+        this.itemForm.amountUsd = this.itemForm.amount
+        this.itemForm.amount = Math.round(this.itemForm.amount * this.currentRate)
+      } else if (this.itemForm.currency === 'ARS' && this.itemForm.amountUsd) {
+        this.itemForm.amount = this.itemForm.amountUsd
+        this.itemForm.amountUsd = undefined
+      }
+    }
+  }
+
+  onItemAmountChange(value: number): void {
+    if (this.itemForm.type === 'installment') {
+      this.onCuotaChange(value)
+    } else {
+      if (this.itemForm.currency === 'USD') {
+        this.itemForm.amountUsd = value
+      }
+    }
+  }
+
+  saveItem(): void {
+    if (!this.canSaveItem) return
+
+    const amount = this.itemForm.currency === 'USD' && this.itemForm.amountUsd
+      ? Math.round(this.itemForm.amountUsd * this.currentRate)
+      : this.itemForm.amount
+
+    const payload: any = {
+      ...this.itemForm,
+      amount,
+      rateUsed: this.itemForm.currency === 'USD' ? this.currentRate : undefined,
+    }
+
+    if (this.editingItemId) {
+      this.cardItemService.update(this.editingItemId, payload)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.showItemForm = false
+            this.loadStatement()
+          },
+          error: () => {},
+        })
+    } else {
+      this.cardItemService.create(payload)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.showItemForm = false
+            this.loadStatement()
+          },
+          error: () => {},
+        })
+    }
+  }
+
+  deleteItem(id: string): void {
+    this.cardItemService.delete(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.loadStatement(),
+        error: () => {},
+      })
+  }
+
   getCategoryEmoji(category: string): string {
     const map: Record<string, string> = {
       food: '\uD83C\uDF54',
@@ -259,6 +737,8 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
       health: '\uD83D\uDC9A',
       education: '\uD83D\uDCDA',
       entertainment: '\uD83C\uDFAE',
+      savings: '\uD83D\uDCB0',
+      debt: '\uD83C\uDFE6',
       other: '\uD83D\uDCB3',
     }
     return map[category] || '\uD83D\uDCB3'

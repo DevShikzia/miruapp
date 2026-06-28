@@ -37,6 +37,26 @@ export interface CreditCardData {
 export type CreateCreditCardRequest = Omit<CreditCardData, '_id' | 'familyId' | 'createdBy' | 'createdAt'>
 export type UpdateCreditCardRequest = Partial<CreateCreditCardRequest>
 
+export interface CardStatementItem {
+  _id: string
+  amount: number
+  category: string
+  description: string
+  date: string
+  createdBy: string
+  source: 'expense' | 'card_item'
+  itemType?: 'installment' | 'recurring'
+  currency?: 'ARS' | 'USD'
+  amountUsd?: number
+  currentInstallment?: number
+  remainingInstallments?: number
+  needsUpdate?: boolean
+  rateChange?: number
+  totalAmount?: number
+  totalInstallments?: number
+  installmentManual?: boolean
+}
+
 export interface CardStatement {
   cardId: string
   cardName: string
@@ -44,12 +64,20 @@ export interface CardStatement {
   periodEnd: string
   dueDate: string
   totalAmount: number
-  expenses: {
-    _id: string
-    amount: number
-    category: string
-    description: string
-    date: string
-    createdBy: string
-  }[]
+  expenseTotal: number
+  itemsTotal: number
+  items: CardStatementItem[]
+  expenses: CardStatementItem[]
+}
+
+export interface DashboardCardItem {
+  _id: string
+  cardId: string
+  cardName: string
+  description: string
+  amount: number
+  currency: 'ARS' | 'USD'
+  amountUsd?: number
+  type: 'installment' | 'recurring'
+  totalInstallments?: number
 }

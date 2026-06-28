@@ -20,6 +20,8 @@ export const createExpenseSchema = z.object({
   paymentType: z.enum(['cash', 'credit_card', 'debit_card', 'transfer']).optional().default('cash'),
   creditCardId: z.string().optional(),
   isEssential: z.boolean().optional().default(false),
+  currency: z.enum(['ARS', 'USD']).optional().default('ARS'),
+  amountUsd: z.number().positive().optional(),
 })
 
 export const updateExpenseSchema = createExpenseSchema.partial()

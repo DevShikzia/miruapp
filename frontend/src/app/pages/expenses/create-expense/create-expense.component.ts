@@ -2,10 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser'
 import { Router, RouterLink } from '@angular/router'
-import { NgIf, NgFor } from '@angular/common'
+import { NgIf, NgFor, DecimalPipe } from '@angular/common'
 import { Subject, takeUntil } from 'rxjs'
 import { ApiService } from '../../../services/api.service'
 import { TarjetasService } from '../../../services/tarjetas.service'
+import { CardItemService } from '../../../services/card-item.service'
 import { CategoryLabelPipe } from '../../../pipes/category-label.pipe'
 import type { ExpenseCategory, PaymentType } from '@shared/types/expense.types'
 import type { CreditCardData } from '@shared/types/credit-card.types'
@@ -65,7 +66,7 @@ const PAYMENT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-create-expense',
   standalone: true,
-  imports: [FormsModule, NgIf, NgFor, RouterLink, CategoryLabelPipe],
+  imports: [FormsModule, NgIf, NgFor, DecimalPipe, RouterLink, CategoryLabelPipe],
   template: `
     <div class="container">
       <header class="header">
@@ -82,10 +83,10 @@ const PAYMENT_ICONS: Record<string, string> = {
       <div class="monto-section">
         <label class="field-label">\u00bfCu\u00e1nto gastaste?</label>
         <div class="monto-input-wrapper">
-          <span class="monto-prefix">$</span>
+          <span class="monto-prefix">{{ currency === 'USD' ? 'USD' : '$' }}</span>
           <input
             class="monto-input"
-            [value]="amountDisplay"
+            [value]="currency === 'USD' ? (amountUsd ?? '') : amountDisplay"
             name="amount"
             type="text"
             (input)="onAmountInput($event)"
@@ -94,6 +95,13 @@ const PAYMENT_ICONS: Record<string, string> = {
             inputmode="decimal"
             autofocus
           />
+        </div>
+        <div class="currency-conversion" *ngIf="currency === 'USD' && amountUsd && currentRate">
+          x {{ currentRate | number:'1.0-0':'es-AR' }} = $ {{ (amountUsd * currentRate) | number:'1.0-0':'es-AR' }}
+        </div>
+        <div class="currency-toggle">
+          <button class="currency-chip" [class.selected]="currency === 'ARS'" (click)="selectCurrency('ARS')">ARS</button>
+          <button class="currency-chip" [class.selected]="currency === 'USD'" (click)="selectCurrency('USD')">USD</button>
         </div>
       </div>
 
@@ -229,6 +237,10 @@ const PAYMENT_ICONS: Record<string, string> = {
     .monto-prefix { font-family: 'Inter', sans-serif; font-size: 32px; font-weight: 600; color: #8A95A8; line-height: 1; }
     .monto-input { background: transparent; border: none; outline: none; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 48px; font-weight: 800; text-align: center; width: 240px; padding: 0; caret-color: #E05252; }
     .monto-input::placeholder { color: #697586; opacity: 0.5; }
+    .currency-conversion { font-size: 12px; font-weight: 500; color: #8A95A8; margin-top: -4px; }
+    .currency-toggle { display: flex; gap: 8px; margin-top: 8px; }
+    .currency-chip { height: 32px; padding: 0 16px; background: #1E2530; border: 1px solid transparent; border-radius: 999px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 150ms; }
+    .currency-chip.selected { border-color: #15C48C; color: #15C48C; background: rgba(21,196,140,0.08); }
 
     .category-section { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
     .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -300,6 +312,9 @@ export class CreateExpenseComponent implements OnInit, OnDestroy {
   description = ''
   isRecurring = false
   recurringDay = ''
+  currency: 'ARS' | 'USD' = 'ARS'
+  amountUsd: number | null = null
+  currentRate = 0
 
   state: 'default' | 'saving' | 'error' | 'success' = 'default'
 
@@ -315,10 +330,23 @@ export class CreateExpenseComponent implements OnInit, OnDestroy {
     private router: Router,
     private sanitizer: DomSanitizer,
     private tarjetasService: TarjetasService,
+    private cardItemService: CardItemService,
   ) {}
 
   ngOnInit(): void {
     this.loadCards()
+    this.loadRate()
+  }
+
+  private loadRate(): void {
+    this.cardItemService.getRate()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.currentRate = res.rate
+        },
+        error: () => {},
+      })
   }
 
   get canSave(): boolean {
@@ -363,16 +391,22 @@ export class CreateExpenseComponent implements OnInit, OnDestroy {
 
     const numericStr = intStr === '' ? '0' : intStr
     const fullNum = hasComma ? numericStr + '.' + (decStr || '0') : numericStr
-    this.amount = parseFloat(fullNum) || 0
+    const parsed = parseFloat(fullNum) || 0
 
-    const formattedInt = parseInt(numericStr, 10).toLocaleString('es-AR')
-    if (intStr === '' && !hasComma) {
-      this.amountDisplay = ''
+    if (this.currency === 'USD') {
+      this.amountUsd = parsed
+      this.amount = this.currentRate > 0 ? Math.round(parsed * this.currentRate) : 0
+      input.value = this.amountUsd?.toString() ?? ''
     } else {
-      this.amountDisplay = hasComma ? formattedInt + ',' + decStr : formattedInt
+      this.amount = parsed
+      this.amountDisplay = this.formatAmountDisplay(numericStr, decStr, hasComma)
+      input.value = this.amountDisplay
     }
+  }
 
-    input.value = this.amountDisplay
+  private formatAmountDisplay(intStr: string, decStr: string, hasComma: boolean): string {
+    const formattedInt = parseInt(intStr || '0', 10).toLocaleString('es-AR')
+    return hasComma ? formattedInt + ',' + decStr : formattedInt
   }
 
   onKeydown(event: KeyboardEvent): void {
@@ -383,7 +417,26 @@ export class CreateExpenseComponent implements OnInit, OnDestroy {
   }
 
   onAmountFocus(): void {
-    if (!this.amountDisplay || this.amountDisplay === '0') {
+    if (this.currency === 'USD') {
+      if (!this.amountUsd) {
+        // clear will happen naturally
+      }
+    } else {
+      if (!this.amountDisplay || this.amountDisplay === '0') {
+        this.amountDisplay = ''
+      }
+    }
+  }
+
+  selectCurrency(currency: 'ARS' | 'USD'): void {
+    if (this.currency === currency) return
+    this.currency = currency
+    if (currency === 'USD') {
+      this.amountUsd = null
+      this.amountDisplay = ''
+    } else {
+      this.amountUsd = null
+      this.amount = 0
       this.amountDisplay = ''
     }
   }
@@ -423,14 +476,20 @@ export class CreateExpenseComponent implements OnInit, OnDestroy {
     if (!this.canSave || this.state === 'saving') return
 
     this.state = 'saving'
-    this.api.post<any>('/finance/expenses', {
+    const payload: any = {
       amount: this.amount,
       category: this.category,
       paymentType: this.paymentType,
       description: this.description || undefined,
       date: new Date().toISOString().split('T')[0],
       creditCardId: this.paymentType === 'credit_card' ? this.creditCardId : undefined,
-    })
+      currency: this.currency,
+    }
+    if (this.currency === 'USD' && this.amountUsd) {
+      payload.amountUsd = this.amountUsd
+      payload.rateUsed = this.currentRate
+    }
+    this.api.post<any>('/finance/expenses', payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {

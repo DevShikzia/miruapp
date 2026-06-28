@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms'
 import { ApiService } from '../../services/api.service'
 import { CategoryLabelPipe } from '../../pipes/category-label.pipe'
 import type { IChecklistItem, IChecklistSummary, IChecklistResponse } from '@shared/types/checklist.types'
+import type { DashboardCardItem } from '@shared/types/credit-card.types'
 
 interface Transaction {
   name: string
@@ -24,6 +25,8 @@ interface DashboardData {
   recentTransactions: Transaction[]
   debts: { active: number; total: number; paidPercent: number }
   savingGoal?: { name: string; current: number; target: number }
+  cardItems: DashboardCardItem[]
+  cardItemsTotal: number
 }
 
 @Component({
@@ -165,6 +168,36 @@ interface DashboardData {
             <div class="debt-fill" [style.width.%]="data.debts.paidPercent"></div>
           </div>
           <span class="debt-label">{{ data.debts.paidPercent }}% pagado</span>
+        </div>
+      </section>
+
+      <!-- Débitos automáticos activos -->
+      <section class="section" *ngIf="data.cardItems.length > 0">
+        <div class="section-header">
+          <h3>Débitos automáticos activos</h3>
+        </div>
+        <div class="ci-card">
+          <ng-container *ngFor="let item of data.cardItems; trackBy: cardItemTrackBy">
+            <div class="ci-item">
+              <div class="ci-top">
+                <div class="ci-left">
+                  <span class="ci-name">{{ item.description }}</span>
+                  <span class="ci-card-name">{{ item.cardName }}</span>
+                </div>
+                <div class="ci-right">
+                  <span class="ci-amount" *ngIf="item.currency === 'USD'">USD {{ item.amountUsd ?? item.amount | number:'1.0-0' }}</span>
+                  <span class="ci-amount" *ngIf="item.currency !== 'USD'">$ {{ item.amount | number:'1.0-0' }}</span>
+                  <span class="ci-badge" [class.recurring]="item.type === 'recurring'" [class.installment]="item.type === 'installment'">
+                    {{ item.type === 'recurring' ? 'Recurrente' : item.totalInstallments ? item.totalInstallments + ' cuotas' : 'Cuotas' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+          <div class="ci-total">
+            <span>Total mensual</span>
+            <span>{{ data.cardItemsTotal | number:'1.0-0' }}</span>
+          </div>
         </div>
       </section>
 
@@ -448,6 +481,23 @@ interface DashboardData {
     .debt-fill { height: 100%; background: #E05252; border-radius: 999px; }
     .debt-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 400; color: #8A95A8; margin-top: 6px; display: block; }
 
+    /* Card items */
+    .ci-card { background: #161B24; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); padding: 12px 16px; }
+    .ci-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .ci-item:last-child { border: none; }
+    .ci-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .ci-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .ci-name { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: #F0F2F5; }
+    .ci-card-name { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 400; color: #697586; }
+    .ci-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .ci-amount { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #F0F2F5; }
+    .ci-badge { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; border-radius: 999px; padding: 2px 8px; }
+    .ci-badge.recurring { background: rgba(91,141,239,0.15); color: #5B8DEF; }
+    .ci-badge.installment { background: rgba(201,154,10,0.12); color: #C99A0A; }
+    .ci-total { display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px; }
+    .ci-total span:first-child { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #8A95A8; }
+    .ci-total span:last-child { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; color: #F0F2F5; }
+
     /* Saving goal */
     .saving-card { background: #161B24; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); padding: 16px; }
     .saving-header { display: flex; align-items: center; gap: 8px; color: #C99A0A; margin-bottom: 12px; }
@@ -535,6 +585,8 @@ export class DashboardComponent {
     totalExpenses: 0,
     recentTransactions: [],
     debts: { active: 0, total: 0, paidPercent: 0 },
+    cardItems: [],
+    cardItemsTotal: 0,
   }
   unreadCount = 0
   fabOpen = false
@@ -582,6 +634,10 @@ export class DashboardComponent {
   }
 
   itemTrackBy(_index: number, item: IChecklistItem): string {
+    return item._id
+  }
+
+  cardItemTrackBy(_index: number, item: DashboardCardItem): string {
     return item._id
   }
 

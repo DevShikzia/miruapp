@@ -15,6 +15,8 @@ function toData(doc: IExpenseDocument): ExpenseData {
     paymentType: doc.paymentType,
     creditCardId: doc.creditCardId,
     isEssential: doc.isEssential,
+    currency: doc.currency || 'ARS',
+    amountUsd: doc.amountUsd,
     createdBy: doc.createdBy,
     createdAt: doc.createdAt.toISOString(),
   }

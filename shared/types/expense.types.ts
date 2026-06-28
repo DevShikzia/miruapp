@@ -11,6 +11,7 @@ export type ExpenseCategory =
   | 'other'
 
 export type PaymentType = 'cash' | 'credit_card' | 'debit_card' | 'transfer'
+export type ExpenseCurrency = 'ARS' | 'USD'
 
 export interface IExpense {
   _id: string
@@ -33,6 +34,8 @@ export interface ExpenseData {
   paymentType: 'cash' | 'credit_card' | 'debit_card' | 'transfer'
   creditCardId?: string
   isEssential: boolean
+  currency: ExpenseCurrency
+  amountUsd?: number
   createdBy: string
   createdByName?: string
   createdAt: string
@@ -46,6 +49,9 @@ export interface ICreateExpenseRequest {
   creditCardId?: string
   date?: string
   userId?: string
+  currency?: ExpenseCurrency
+  amountUsd?: number
+  rateUsed?: number
 }
 
 export type CreateExpenseRequest = Omit<ExpenseData, '_id' | 'familyId' | 'createdBy' | 'createdAt'>
@@ -58,4 +64,7 @@ export interface IUpdateExpenseRequest {
   paymentType?: PaymentType
   creditCardId?: string
   date?: string
+  currency?: ExpenseCurrency
+  amountUsd?: number
+  rateUsed?: number
 }

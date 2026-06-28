@@ -2,10 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser'
 import { Router, ActivatedRoute, RouterLink } from '@angular/router'
-import { NgIf, NgFor } from '@angular/common'
+import { NgIf, NgFor, DecimalPipe } from '@angular/common'
 import { Subject, takeUntil } from 'rxjs'
 import { ApiService } from '../../../services/api.service'
 import { TarjetasService } from '../../../services/tarjetas.service'
+import { CardItemService } from '../../../services/card-item.service'
 import { CategoryLabelPipe } from '../../../pipes/category-label.pipe'
 import type { ExpenseCategory, PaymentType, ExpenseData } from '@shared/types/expense.types'
 import type { CreditCardData } from '@shared/types/credit-card.types'
@@ -65,7 +66,7 @@ const PAYMENT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-edit-expense',
   standalone: true,
-  imports: [FormsModule, NgIf, NgFor, RouterLink, CategoryLabelPipe],
+  imports: [FormsModule, NgIf, NgFor, DecimalPipe, RouterLink, CategoryLabelPipe],
   template: `
     <div class="container">
       <header class="header">
@@ -92,10 +93,10 @@ const PAYMENT_ICONS: Record<string, string> = {
         <div class="monto-section">
           <label class="field-label">\u00bfCu\u00e1nto gastaste?</label>
           <div class="monto-input-wrapper">
-            <span class="monto-prefix">$</span>
+            <span class="monto-prefix">{{ currency === 'USD' ? 'USD' : '$' }}</span>
             <input
               class="monto-input"
-              [value]="amountDisplay"
+              [value]="currency === 'USD' ? (amountUsd ?? '') : amountDisplay"
               name="amount"
               type="text"
               inputmode="decimal"
@@ -103,6 +104,13 @@ const PAYMENT_ICONS: Record<string, string> = {
               (focus)="onAmountFocus()"
               placeholder="0" (keydown)="onKeydown($event)"
             />
+          </div>
+          <div class="currency-conversion" *ngIf="currency === 'USD' && amountUsd && currentRate">
+            x {{ currentRate | number:'1.0-0':'es-AR' }} = $ {{ (amountUsd * currentRate) | number:'1.0-0':'es-AR' }}
+          </div>
+          <div class="currency-toggle">
+            <button class="currency-chip" [class.selected]="currency === 'ARS'" (click)="selectCurrency('ARS')">ARS</button>
+            <button class="currency-chip" [class.selected]="currency === 'USD'" (click)="selectCurrency('USD')">USD</button>
           </div>
         </div>
 
@@ -234,6 +242,10 @@ const PAYMENT_ICONS: Record<string, string> = {
     .monto-prefix { font-family: 'Inter', sans-serif; font-size: 32px; font-weight: 600; color: #8A95A8; line-height: 1; }
     .monto-input { background: transparent; border: none; outline: none; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 48px; font-weight: 800; text-align: center; width: 240px; padding: 0; caret-color: #E05252; }
     .monto-input::placeholder { color: #697586; opacity: 0.5; }
+    .currency-conversion { font-size: 12px; font-weight: 500; color: #8A95A8; margin-top: -4px; }
+    .currency-toggle { display: flex; gap: 8px; margin-top: 8px; }
+    .currency-chip { height: 32px; padding: 0 16px; background: #1E2530; border: 1px solid transparent; border-radius: 999px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 150ms; }
+    .currency-chip.selected { border-color: #15C48C; color: #15C48C; background: rgba(21,196,140,0.08); }
 
     .category-section { margin-top: 28px; display: flex; flex-direction: column; gap: 8px; }
     .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -300,6 +312,9 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
   category: ExpenseCategory = 'other'
   paymentType: PaymentType = 'cash'
   description = ''
+  currency: 'ARS' | 'USD' = 'ARS'
+  amountUsd: number | null = null
+  currentRate = 0
 
   state: 'loading' | 'loaded' | 'saving' | 'error' | 'success' = 'loading'
   showDiscardModal = false
@@ -317,6 +332,7 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
     private tarjetasService: TarjetasService,
+    private cardItemService: CardItemService,
   ) {}
 
   get dirty(): boolean {
@@ -326,7 +342,9 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
       this.category !== this.original.category ||
       this.paymentType !== this.original.paymentType ||
       this.description !== (this.original.description || '') ||
-      (this.creditCardId ?? undefined) !== (this.original.creditCardId ?? undefined)
+      (this.creditCardId ?? undefined) !== (this.original.creditCardId ?? undefined) ||
+      (this.currency ?? 'ARS') !== (this.original.currency ?? 'ARS') ||
+      (this.amountUsd ?? null) !== (this.original.amountUsd ?? null)
     )
   }
 
@@ -335,7 +353,19 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
       this.expenseId = params['id']
       this.loadCards()
       this.loadExpense()
+      this.loadRate()
     })
+  }
+
+  private loadRate(): void {
+    this.cardItemService.getRate()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.currentRate = res.rate
+        },
+        error: () => {},
+      })
   }
 
   private loadCards(): void {
@@ -367,11 +397,13 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
           const data = res.data as ExpenseData
           this.original = data
           this.amount = data.amount
-          this.amountDisplay = this.formatAmount(data.amount)
+          this.amountDisplay = this.formatAmountNumber(data.amount)
           this.category = data.category as ExpenseCategory
           this.paymentType = data.paymentType || 'cash'
           this.description = data.description || ''
           this.creditCardId = data.creditCardId || null
+          this.currency = data.currency || 'ARS'
+          this.amountUsd = data.amountUsd ?? null
           this.state = 'loaded'
         },
         error: () => {
@@ -396,16 +428,30 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
 
     const numericStr = intStr === '' ? '0' : intStr
     const fullNum = hasComma ? numericStr + '.' + (decStr || '0') : numericStr
-    this.amount = parseFloat(fullNum) || 0
+    const parsed = parseFloat(fullNum) || 0
 
-    const formattedInt = parseInt(numericStr, 10).toLocaleString('es-AR')
-    if (intStr === '' && !hasComma) {
-      this.amountDisplay = ''
+    if (this.currency === 'USD') {
+      this.amountUsd = parsed
+      this.amount = this.currentRate > 0 ? Math.round(parsed * this.currentRate) : 0
+      input.value = this.amountUsd?.toString() ?? ''
     } else {
-      this.amountDisplay = hasComma ? formattedInt + ',' + decStr : formattedInt
+      this.amount = parsed
+      this.amountDisplay = this.formatAmount(numericStr, hasComma, decStr)
+      input.value = this.amountDisplay
     }
+  }
 
-    input.value = this.amountDisplay
+  private formatAmount(intStr: string, hasComma: boolean, decStr: string): string {
+    const formattedInt = parseInt(intStr || '0', 10).toLocaleString('es-AR')
+    return hasComma ? formattedInt + ',' + decStr : formattedInt
+  }
+
+  private formatAmountNumber(value: number): string {
+    if (value === 0) return ''
+    const intPart = Math.floor(value)
+    const decPart = Math.round((value - intPart) * 100)
+    const formattedInt = intPart.toLocaleString('es-AR')
+    return decPart > 0 ? formattedInt + ',' + String(decPart).padStart(2, '0') : formattedInt
   }
 
   onKeydown(event: KeyboardEvent): void {
@@ -416,17 +462,13 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
   }
 
   onAmountFocus(): void {
-    if (this.amountDisplay === '0' || !this.amountDisplay) {
-      this.amountDisplay = ''
+    if (this.currency === 'USD') {
+      // no-op for USD, input shows amountUsd directly
+    } else {
+      if (this.amountDisplay === '0' || !this.amountDisplay) {
+        this.amountDisplay = ''
+      }
     }
-  }
-
-  private formatAmount(value: number): string {
-    if (value === 0) return ''
-    const intPart = Math.floor(value)
-    const decPart = Math.round((value - intPart) * 100)
-    const formattedInt = intPart.toLocaleString('es-AR')
-    return decPart > 0 ? formattedInt + ',' + String(decPart).padStart(2, '0') : formattedInt
   }
 
   getCategoryIcon(name: string): SafeHtml {
@@ -447,6 +489,19 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
 
   selectPaymentType(pt: PaymentType): void {
     this.paymentType = pt
+  }
+
+  selectCurrency(currency: 'ARS' | 'USD'): void {
+    if (this.currency === currency) return
+    this.currency = currency
+    if (currency === 'USD') {
+      this.amountUsd = null
+      this.amountDisplay = ''
+    } else {
+      this.amountUsd = null
+      this.amount = 0
+      this.amountDisplay = ''
+    }
   }
 
   onBack(): void {
@@ -470,13 +525,19 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
     if (!this.dirty || this.state === 'saving') return
 
     this.state = 'saving'
-    this.api.put<ExpenseData>('/finance/expenses/' + this.expenseId, {
+    const payload: any = {
       amount: this.amount,
       category: this.category,
       paymentType: this.paymentType,
       description: this.description || undefined,
       creditCardId: this.paymentType === 'credit_card' ? this.creditCardId : undefined,
-    })
+      currency: this.currency,
+    }
+    if (this.currency === 'USD' && this.amountUsd) {
+      payload.amountUsd = this.amountUsd
+      payload.rateUsed = this.currentRate
+    }
+    this.api.put<ExpenseData>('/finance/expenses/' + this.expenseId, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {

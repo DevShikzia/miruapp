@@ -82,26 +82,48 @@ import type { DebtData, UpdateDebtRequest } from '@shared/types/debt.types'
 
         <div class="field-section" *ngIf="debtType">
           <label class="field-label">Cuotas</label>
-          <div class="input-wrapper inline">
-            <input
-              class="text-input narrow"
-              [(ngModel)]="installments"
-              name="installments"
-              type="number"
-              min="1"
-              max="36"
-              placeholder="1"
-              (input)="onInstallmentsChange()"
-              [readonly]="hasPayments"
-            />
-            <span class="inline-hint" *ngIf="installments > 0 && amount > 0">
-              {{ installments }} {{ installments === 1 ? 'cuota de' : 'cuotas de' }} $ {{ installmentAmount | number:'1.0-0' }}
-            </span>
+          <div class="split-inputs">
+            <div class="split-group">
+              <input
+                class="text-input center"
+                [(ngModel)]="installments"
+                name="installments"
+                type="number"
+                min="1"
+                max="36"
+                placeholder="1"
+                (input)="onInstallmentsChange()"
+                [readonly]="hasPayments"
+              />
+              <span class="split-label">{{ installments === 1 ? 'cuota' : 'cuotas' }}</span>
+            </div>
+            <div class="split-sep">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+            </div>
+            <div class="split-group">
+              <input
+                class="text-input center"
+                [ngModel]="installmentAmount"
+                (ngModelChange)="onInstallmentAmountChange($event)"
+                name="installmentAmount"
+                type="text"
+                inputmode="decimal"
+                placeholder="$ 0"
+                [readonly]="hasPayments"
+              />
+              <span class="split-label">c/u</span>
+            </div>
           </div>
+          <span class="field-hint" *ngIf="installments > 0 && amount > 0 && installmentAmount > 0">
+            Total: $ {{ (installmentAmount * installments) | number:'1.0-0' }}
+            <span *ngIf="(installmentAmount * installments) !== amount">
+              · Dif: $ {{ ((installmentAmount * installments) - amount) | number:'1.0-0' }}
+            </span>
+          </span>
         </div>
 
         <div class="field-section">
-          <label class="field-label">Próximo vencimiento</label>
+          <label class="field-label">Vencimiento (opcional)</label>
           <div class="input-wrapper">
             <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             <input
@@ -198,6 +220,12 @@ import type { DebtData, UpdateDebtRequest } from '@shared/types/debt.types'
     .field-label { font-size: 12px; font-weight: 500; color: #8A95A8; }
     .field-hint { font-size: 11px; font-weight: 400; color: #697586; margin-top: 2px; }
 
+    .split-inputs { display: flex; align-items: center; gap: 4px; background: #1E2530; border-radius: 16px; height: 48px; padding: 0 8px; }
+    .split-group { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+    .split-sep { flex-shrink: 0; display: flex; align-items: center; opacity: 0.4; }
+    .split-label { font-size: 12px; font-weight: 500; color: #8A95A8; white-space: nowrap; }
+    .text-input.center { text-align: center; }
+
     .input-wrapper { display: flex; align-items: center; gap: 10px; background: #1E2530; border-radius: 16px; height: 48px; padding: 0 16px; transition: opacity 150ms; }
     .input-wrapper.inline { flex-wrap: wrap; height: auto; min-height: 48px; padding: 8px 16px; gap: 8px; }
     .input-wrapper.readonly { opacity: 0.5; }
@@ -262,6 +290,8 @@ export class EditDebtComponent implements OnInit, OnDestroy {
   amountDisplay = ''
   debtType: 'fixed' | 'credit' | null = null
   installments = 1
+  installmentAmount = 0
+  installmentManual = false
   dueDate = ''
   interestRate = 0
   description = ''
@@ -290,15 +320,11 @@ export class EditDebtComponent implements OnInit, OnDestroy {
       this.amount !== this.original.totalAmount ||
       this.debtType !== (this.original.interestRate > 0 ? 'credit' : 'fixed') ||
       this.installments !== this.original.installments ||
-      this.dueDate !== this.original.dueDate ||
+      this.installmentAmount !== this.original.installmentAmount ||
+      this.dueDate !== (this.original.dueDate || '') ||
       this.interestRate !== this.original.interestRate ||
       this.description !== (this.original.description || '')
     )
-  }
-
-  get installmentAmount(): number {
-    if (this.installments <= 0 || this.amount <= 0) return 0
-    return Math.round(this.amount / this.installments)
   }
 
   get estimatedInterest(): number {
@@ -332,6 +358,7 @@ export class EditDebtComponent implements OnInit, OnDestroy {
           this.amountDisplay = this.formatAmount(data.totalAmount)
           this.debtType = data.interestRate > 0 ? 'credit' : 'fixed'
           this.installments = data.installments || 1
+          this.installmentAmount = data.installmentAmount || Math.round(this.amount / this.installments)
           this.dueDate = data.dueDate
           this.interestRate = data.interestRate || 0
           this.description = data.description || ''
@@ -357,6 +384,14 @@ export class EditDebtComponent implements OnInit, OnDestroy {
     return value.replace(/[^0-9]/g, '')
   }
 
+  private calcInstallmentAmount(): void {
+    if (this.installments <= 0 || this.amount <= 0) {
+      this.installmentAmount = 0
+    } else {
+      this.installmentAmount = Math.round(this.amount / this.installments)
+    }
+  }
+
   onAmountInput(event: Event): void {
     if (this.hasPayments) return
     const input = event.target as HTMLInputElement
@@ -365,6 +400,7 @@ export class EditDebtComponent implements OnInit, OnDestroy {
     const formatted = this.amount === 0 ? '' : this.amount.toLocaleString('es-AR')
     this.amountDisplay = formatted
     input.value = this.amountDisplay
+    if (!this.installmentManual) this.calcInstallmentAmount()
   }
 
   onAmountFocus(): void {
@@ -376,6 +412,14 @@ export class EditDebtComponent implements OnInit, OnDestroy {
   onInstallmentsChange(): void {
     if (this.installments < 1) this.installments = 1
     if (this.installments > 36) this.installments = 36
+    if (!this.installmentManual) this.calcInstallmentAmount()
+  }
+
+  onInstallmentAmountChange(value: string): void {
+    const raw = this.getRawNumeric(value)
+    const num = raw === '' ? 0 : parseInt(raw, 10)
+    this.installmentAmount = num
+    this.installmentManual = num > 0
   }
 
   onInterestChange(): void {
@@ -407,7 +451,7 @@ export class EditDebtComponent implements OnInit, OnDestroy {
     const payload: UpdateDebtRequest = {
       personName: this.personName.trim(),
       totalAmount: this.amount,
-      dueDate: this.dueDate,
+      dueDate: this.dueDate || undefined,
       description: this.description.trim() || undefined,
       installments: this.installments,
       installmentAmount: this.installmentAmount,

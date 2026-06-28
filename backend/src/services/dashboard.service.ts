@@ -2,10 +2,12 @@ import { IncomeModel } from '../models/Income.model'
 import { ExpenseModel } from '../models/Expense.model'
 import { DebtModel } from '../models/Debt.model'
 import { SavingModel } from '../models/Saving.model'
+import { CardItemModel } from '../models/CardItem.model'
 import * as checklistService from './checklist.service'
 import { UserModel } from '../models/User.model'
 
 import type { IChecklistSummary } from '@shared/types/checklist.types'
+import type { DashboardCardItem } from '@shared/types/credit-card.types'
 
 interface RecentTransaction {
   _id: string
@@ -27,6 +29,8 @@ interface DashboardData {
   recentTransactions: RecentTransaction[]
   debts: { active: number; total: number; paidPercent: number }
   savingGoal?: { name: string; current: number; target: number }
+  cardItems: DashboardCardItem[]
+  cardItemsTotal: number
   semaforo: 'verde' | 'amarillo' | 'rojo'
   checklist: IChecklistSummary
 }
@@ -119,6 +123,25 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
     ? { name: sortedSavings[0].name, current: sortedSavings[0].currentAmount, target: sortedSavings[0].targetAmount }
     : undefined
 
+  const cardItemDocs = await CardItemModel.find({ familyId, isActive: true })
+  const cardItemsMap = new Map<string, string>()
+  const cardDocs = await import('../models/CreditCard.model').then(m => m.CreditCardModel.find({ familyId }).lean())
+  for (const c of cardDocs) {
+    cardItemsMap.set(c._id.toString(), c.name)
+  }
+  const dashboardCardItems: DashboardCardItem[] = cardItemDocs.map(item => ({
+    _id: item._id.toString(),
+    cardId: item.cardId,
+    cardName: cardItemsMap.get(item.cardId) || 'Tarjeta',
+    description: item.description,
+    amount: item.amount,
+    currency: item.currency as 'ARS' | 'USD',
+    amountUsd: item.amountUsd,
+    type: item.type as 'installment' | 'recurring',
+    totalInstallments: item.totalInstallments,
+  }))
+  const cardItemsTotal = dashboardCardItems.reduce((s, i) => s + i.amount, 0)
+
   return {
     balance,
     variationPercent,
@@ -131,6 +154,8 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
       paidPercent,
     },
     savingGoal,
+    cardItems: dashboardCardItems,
+    cardItemsTotal,
     semaforo,
     checklist: checklist.summary,
   }

@@ -29,4 +29,6 @@ export const updateSavingSchema = z.object({
 export const addContributionSchema = z.object({
   amount: z.number().positive('El monto debe ser positivo'),
   date: z.string().regex(dateRegex, 'Formato de fecha inválido'),
+  paymentType: z.enum(['cash', 'credit_card', 'debit_card', 'transfer']).optional(),
+  creditCardId: z.string().optional(),
 })

@@ -29,6 +29,8 @@ export const createPaymentSchema = z.object({
   date: z.string().regex(dateRegex, 'Formato de fecha inválido'),
   description: z.string().max(200).optional().default(''),
   paidBy: z.string().optional().default(''),
+  paymentType: z.enum(['cash', 'credit_card', 'debit_card', 'transfer']).optional(),
+  creditCardId: z.string().optional(),
 })
 
 export const updatePaymentSchema = z.object({

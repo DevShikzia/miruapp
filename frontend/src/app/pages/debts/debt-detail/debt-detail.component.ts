@@ -1,11 +1,14 @@
-import { Component, OnInit, OnDestroy } from '@angular/core'
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { Router, ActivatedRoute } from '@angular/router'
 import { NgIf, NgFor, DecimalPipe, DatePipe } from '@angular/common'
 import { Subject, takeUntil } from 'rxjs'
 import { ApiService } from '../../../services/api.service'
 import { AuthService } from '../../../services/auth.service'
+import { TarjetasService } from '../../../services/tarjetas.service'
 import type { DebtData, CreatePaymentRequest } from '@shared/types/debt.types'
+import type { PaymentType } from '@shared/types/expense.types'
+import type { CreditCardData } from '@shared/types/credit-card.types'
 
 @Component({
   selector: 'app-debt-detail',
@@ -104,6 +107,20 @@ import type { DebtData, CreatePaymentRequest } from '@shared/types/debt.types'
               inputmode="decimal"
               autofocus
             />
+          </div>
+
+          <div class="pay-type-row">
+            <button class="pay-type-btn" *ngFor="let pt of PAYMENT_TYPES" [class.selected]="paymentType === pt.key" (click)="selectPaymentType(pt.key)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="12" y2="12"/></svg>
+              <span>{{ pt.label }}</span>
+            </button>
+          </div>
+
+          <div class="card-selector-section" *ngIf="paymentType === 'credit_card'">
+            <select class="card-select" [(ngModel)]="creditCardId" name="creditCardId">
+              <option value="" disabled selected>Seleccionar tarjeta</option>
+              <option *ngFor="let card of creditCards" [value]="card._id">{{ card.name }} {{ card.lastFourDigits ? '•••• ' + card.lastFourDigits : '' }}</option>
+            </select>
           </div>
 
           <div class="pay-actions">
@@ -254,6 +271,12 @@ import type { DebtData, CreatePaymentRequest } from '@shared/types/debt.types'
     .pay-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .pay-btn { background: #1E2530; color: #F0F2F5; border: none; border-radius: 999px; padding: 8px 16px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 150ms; }
     .pay-btn:hover { background: rgba(255,255,255,0.08); }
+    .pay-type-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .pay-type-btn { flex: 1; min-width: 70px; height: 34px; background: #1E2530; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 150ms; }
+    .pay-type-btn.selected { background: rgba(91,141,239,0.15); border-color: #5B8DEF; color: #5B8DEF; }
+    .card-selector-section { margin-bottom: 12px; }
+    .card-select { width: 100%; height: 40px; background: #1E2530; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; padding: 0 12px; outline: none; }
+    .card-select option { background: #1E2530; color: #F0F2F5; }
 
     .btn-mark-paid { width: 100%; height: 44px; margin-top: 12px; background: #15C48C; color: #041710; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-register-pay { width: 100%; height: 44px; margin-top: 12px; background: #E05252; color: #F0F2F5; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -301,9 +324,19 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
   showInfo = false
   showDeleteModal = false
 
+  PAYMENT_TYPES = [
+    { key: 'cash' as PaymentType, label: 'Efectivo' },
+    { key: 'credit_card' as PaymentType, label: 'Crédito' },
+    { key: 'debit_card' as PaymentType, label: 'Débito' },
+    { key: 'transfer' as PaymentType, label: 'Transferencia' },
+  ]
+
   payMode: 'installment' | 'custom' | null = null
   payAmount = 0
   payAmountDisplay = ''
+  paymentType: PaymentType = 'cash'
+  creditCardId = ''
+  creditCards: CreditCardData[] = []
 
   pullDistance = 0
   private pullStartY = 0
@@ -316,11 +349,17 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private auth: AuthService,
+    private cdr: ChangeDetectorRef,
+    private tarjetasService: TarjetasService,
   ) {}
 
   ngOnInit(): void {
     const user = this.auth.user as any
     this.currentUserId = user?._id || ''
+
+    this.tarjetasService.getAll().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (cards) => { this.creditCards = cards ?? [] },
+    })
 
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.debtId = params['id']
@@ -341,9 +380,11 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.debt = res.data as DebtData
           this.state = 'loaded'
+          this.cdr.markForCheck()
         },
         error: () => {
           this.state = 'error'
+          this.cdr.markForCheck()
         },
       })
   }
@@ -384,6 +425,7 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.state = 'error'
+          this.cdr.markForCheck()
         },
       })
   }
@@ -418,8 +460,14 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  selectPaymentType(pt: PaymentType): void {
+    this.paymentType = pt
+    if (pt !== 'credit_card') this.creditCardId = ''
+  }
+
   registerPayment(markPaid: boolean): void {
     if (!this.debt || this.payAmount <= 0) return
+    if (this.paymentType === 'credit_card' && !this.creditCardId) return
 
     const remaining = this.debt.totalAmount - this.debt.paidAmount
     const amount = markPaid ? remaining : Math.min(this.payAmount, remaining)
@@ -428,6 +476,8 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
       amount,
       date: new Date().toISOString().split('T')[0],
       description: markPaid ? 'Pago final' : 'Pago de cuota ' + (this.debt.payments.length + 1) + '/' + this.debt.installments,
+      paymentType: this.paymentType,
+      creditCardId: this.paymentType === 'credit_card' ? this.creditCardId : undefined,
     }
 
     this.api.post<CreatePaymentRequest>('/debts/' + this.debtId + '/payments', payload)
@@ -438,13 +488,16 @@ export class DebtDetailComponent implements OnInit, OnDestroy {
           this.payAmount = 0
           this.payAmountDisplay = ''
           this.payMode = null
+          this.cdr.markForCheck()
           setTimeout(() => {
             this.state = 'loaded'
+            this.cdr.markForCheck()
             this.loadDebt()
           }, 400)
         },
         error: () => {
           this.state = 'error'
+          this.cdr.markForCheck()
         },
       })
   }

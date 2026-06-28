@@ -50,6 +50,14 @@ Chips con el tipo actual pre-seleccionado.
 
 ---
 
+### 4b. Selector de tarjeta de crédito (condicional)
+
+Idéntico al de creación (`08-crear-gasto.md#4b-selector-de-tarjeta-de-crédito-condicional`).
+
+Aparece solo si el tipo de pago es "Tarjeta crédito" o cuando se selecciona ese tipo. Si el gasto ya tenía `creditCardId`, la tarjeta correspondiente aparece **pre-seleccionada** en el selector.
+
+---
+
 ### 5. Descripción (opcional)
 Pre-cargada si existe.
 
@@ -103,6 +111,7 @@ Pre-cargada si existe.
 | Método | Endpoint | Descripción |
 |---|---|---|
 | PUT | `/api/finance/expenses/:id` | Actualizar gasto |
+| GET | `/api/credit-cards` | Listar tarjetas para el selector |
 
 ## Dependencias del backend
 
@@ -112,3 +121,5 @@ Pre-cargada si existe.
 | Service | `services/expense.service.ts` | Reglas de negocio de gastos |
 | Schema | `schemas/finance.schema.ts` | Validación Zod de actualización |
 | Model | `models/Expense.model.ts` | Schema de MongoDB |
+| Service | `services/creditCard.service.ts` | Consulta de tarjetas para el selector |
+| Types | `shared/types/credit-card.types.ts` | Tipos de tarjeta en el selector |

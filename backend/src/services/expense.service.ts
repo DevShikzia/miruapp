@@ -2,6 +2,7 @@ import { FilterQuery } from 'mongoose'
 import { ExpenseModel, IExpenseDocument } from '../models/Expense.model'
 import { CreateExpenseRequest, UpdateExpenseRequest, ExpenseData } from '@shared/types/expense.types'
 import { NotFoundError } from '../utils/errors'
+import { UserModel } from '../models/User.model'
 
 function toData(doc: IExpenseDocument): ExpenseData {
   return {
@@ -12,6 +13,7 @@ function toData(doc: IExpenseDocument): ExpenseData {
     description: doc.description,
     date: doc.date,
     paymentType: doc.paymentType,
+    creditCardId: doc.creditCardId,
     isEssential: doc.isEssential,
     createdBy: doc.createdBy,
     createdAt: doc.createdAt.toISOString(),
@@ -31,7 +33,16 @@ export async function getAll(familyId: string, startDate?: string, endDate?: str
     if (endDate) filter.date.$lte = endDate
   }
   const docs = await ExpenseModel.find(filter).sort({ date: -1 })
-  return docs.map(toData)
+  const data = docs.map(toData)
+  const unique = [...new Set(data.map(d => d.createdBy))]
+  const users = unique.length > 0
+    ? await UserModel.find({ _id: { $in: unique } }).select('name').lean()
+    : []
+  const userMap = new Map(users.map(u => [u._id.toString(), u.name]))
+  for (const d of data) {
+    d.createdByName = userMap.get(d.createdBy) || d.createdBy
+  }
+  return data
 }
 
 export async function getById(id: string, familyId: string): Promise<ExpenseData> {

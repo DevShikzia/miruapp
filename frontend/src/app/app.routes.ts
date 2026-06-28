@@ -65,9 +65,25 @@ export const routes: Routes = [
       { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'movimientos', loadComponent: () => import('./pages/movimientos/movimientos.component').then(m => m.MovimientosComponent) },
       { path: 'deudas', loadComponent: () => import('./pages/debts/debts.component').then(m => m.DebtsComponent) },
+      { path: 'tarjetas', loadComponent: () => import('./pages/tarjetas/lista-tarjetas/lista-tarjetas.component').then(m => m.ListaTarjetasComponent) },
       { path: 'ahorros', loadComponent: () => import('./pages/savings/savings.component').then(m => m.SavingsComponent) },
       { path: 'familia', loadComponent: () => import('./pages/familia/familia.component').then(m => m.FamiliaComponent) },
     ],
+  },
+  {
+    path: 'tarjetas/nueva',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/tarjetas/form-tarjeta/form-tarjeta.component').then(m => m.FormTarjetaComponent),
+  },
+  {
+    path: 'tarjetas/:id/editar',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/tarjetas/form-tarjeta/form-tarjeta.component').then(m => m.FormTarjetaComponent),
+  },
+  {
+    path: 'tarjetas/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/tarjetas/detalle-tarjeta/detalle-tarjeta.component').then(m => m.DetalleTarjetaComponent),
   },
   { path: '**', redirectTo: '/dashboard' },
 ]

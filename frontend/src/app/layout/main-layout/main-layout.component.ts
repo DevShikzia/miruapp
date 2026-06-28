@@ -19,6 +19,10 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router'
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>
           <span>Movimientos</span>
         </a>
+        <a routerLink="/tarjetas" routerLinkActive="active" class="tab">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="6" x2="10" y1="16" y2="16"/></svg>
+          <span>Tarjetas</span>
+        </a>
         <a routerLink="/deudas" routerLinkActive="active" class="tab">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/><path d="M18 8V5a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v12l-4-3"/><path d="M11 8h10"/><path d="m16 13 3 3 4-4"/></svg>
           <span>Deudas</span>

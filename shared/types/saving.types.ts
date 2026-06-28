@@ -1,3 +1,5 @@
+import type { PaymentType } from './expense.types'
+
 export type SavingColor =
   | '#C99A0A'
   | '#15C48C'
@@ -93,4 +95,6 @@ export interface UpdateSavingRequest {
 export interface AddContributionRequest {
   amount: number
   date: string
+  paymentType?: PaymentType
+  creditCardId?: string
 }

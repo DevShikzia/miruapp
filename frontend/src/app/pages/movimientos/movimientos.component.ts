@@ -17,6 +17,7 @@ interface Movement {
   categoryKey: string
   date: string
   time: string
+  createdBy: string
 }
 
 interface DateGroup {
@@ -34,7 +35,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   sale: 'Venta', family: 'Familia', loan: 'Préstamo', refund: 'Reembolso',
   food: 'Comidas', transport: 'Transporte', utilities: 'Servicios',
   rent: 'Alquiler', health: 'Salud', education: 'Educación',
-  entertainment: 'Entretenimiento', other: 'Otro',
+  entertainment: 'Entretenimiento', savings: 'Ahorros', debt: 'Deudas', other: 'Otro',
 }
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -167,7 +168,7 @@ function groupByDate(movements: Movement[]): DateGroup[] {
               </div>
               <div class="movement-info">
                 <span class="movement-name">{{ m.description }}</span>
-                <span class="movement-meta">{{ m.category }} · {{ m.time }}</span>
+                <span class="movement-meta">{{ m.category }} · {{ m.time }} · {{ m.createdBy }}</span>
               </div>
               <span class="movement-amount" [ngClass]="m.type">
                 {{ m.type === 'income' ? '+' : '-' }}$ {{ m.amount | number:'1.0-0' }}
@@ -350,22 +351,24 @@ export class MovimientosComponent {
             const incomes: Movement[] = (incRes.data ?? []).map(i => ({
               id: i._id,
               type: 'income',
-              description: i.description || i.category,
+              description: i.description || 'Ingreso',
               amount: i.amount,
               category: CATEGORY_LABELS[i.category] || i.category,
               categoryKey: i.category,
               date: i.date,
               time: i.createdAt ? i.createdAt.slice(11, 16) : '',
+              createdBy: i.createdByName || i.createdBy,
             }))
             const expenses: Movement[] = (expRes.data ?? []).map(e => ({
               id: e._id,
               type: 'expense',
-              description: e.description || e.category,
+              description: e.description || 'Gasto',
               amount: e.amount,
               category: CATEGORY_LABELS[e.category] || e.category,
               categoryKey: e.category,
               date: e.date,
               time: e.createdAt ? e.createdAt.slice(11, 16) : '',
+              createdBy: e.createdByName || e.createdBy,
             }))
             this.allMovements = [...incomes, ...expenses].sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
             this.state = 'loaded'

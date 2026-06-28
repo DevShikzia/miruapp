@@ -70,6 +70,14 @@ Miru resuelve todo esto en un solo lugar, accesible como app desde el celular.
 - Ver cuáles están activos y cuáles pausados
 - Agregar, editar o eliminar gastos fácilmente
 
+### 💳 Tarjetas de Crédito
+- Registrar tarjetas con nombre, marca, banco y últimos dígitos
+- Configurar día de cierre y día de vencimiento por tarjeta
+- Vincular gastos a una tarjeta específica (solo si el tipo de pago es crédito)
+- Ver el resumen del ciclo actual: gastos entre cierre y cierre
+- Próximo pago estimado de la tarjeta
+- Límite de crédito disponible vs usado
+
 ### 💳 Deudas
 - Registrar cada deuda con monto total, persona y fecha de vencimiento
 - Tipo: deuda a pagar (debtor) o cobrar (creditor)

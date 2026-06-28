@@ -2,6 +2,7 @@ import { FilterQuery } from 'mongoose'
 import { IncomeModel, IIncomeDocument } from '../models/Income.model'
 import { CreateIncomeRequest, UpdateIncomeRequest, IncomeData } from '@shared/types/income.types'
 import { NotFoundError } from '../utils/errors'
+import { UserModel } from '../models/User.model'
 
 function toData(doc: IIncomeDocument): IncomeData {
   return {
@@ -30,7 +31,16 @@ export async function getAll(familyId: string, startDate?: string, endDate?: str
     if (endDate) filter.date.$lte = endDate
   }
   const docs = await IncomeModel.find(filter).sort({ date: -1 })
-  return docs.map(toData)
+  const data = docs.map(toData)
+  const unique = [...new Set(data.map(d => d.createdBy))]
+  const users = unique.length > 0
+    ? await UserModel.find({ _id: { $in: unique } }).select('name').lean()
+    : []
+  const userMap = new Map(users.map(u => [u._id.toString(), u.name]))
+  for (const d of data) {
+    d.createdByName = userMap.get(d.createdBy) || d.createdBy
+  }
+  return data
 }
 
 export async function getById(id: string, familyId: string): Promise<IncomeData> {

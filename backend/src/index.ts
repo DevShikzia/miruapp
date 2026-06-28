@@ -11,6 +11,7 @@ import financeRoutes from './routes/finance.routes'
 import debtRoutes from './routes/debt.routes'
 import savingRoutes from './routes/saving.routes'
 import extraRoutes from './routes/extra.routes'
+import creditCardRoutes from './routes/creditCard.routes'
 import { initSocket } from './services/socket.service'
 import { startCronJobs } from './services/cron.service'
 
@@ -35,6 +36,7 @@ app.use('/api/finance', financeRoutes)
 app.use('/api/debts', debtRoutes)
 app.use('/api/savings', savingRoutes)
 app.use('/api', extraRoutes)
+app.use('/api/credit-cards', creditCardRoutes)
 app.use(errorMiddleware)
 
 async function start(): Promise<void> {

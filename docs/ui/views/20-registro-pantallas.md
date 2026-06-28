@@ -50,6 +50,17 @@
 
 ---
 
+## Pantallas de Tarjetas de Crédito
+
+| # | Archivo | Pantalla | Estado Docs | Estado Código | Notas |
+|---|---------|----------|:-----------:|:-------------:|-------|
+| 22 | `22-tarjetas.md` | Tarjetas de crédito | ✅ | 🚧 | Lista con resumen de deuda total. Barra de uso vs límite. Nuevo tab en bottom nav |
+| 23 | `23-crear-tarjeta.md` | Crear tarjeta | ✅ | 🚧 | Formulario completo. Marca, cierre, vencimiento, color. Campos opcionales |
+| 24 | `24-editar-tarjeta.md` | Editar tarjeta | ✅ | 🚧 | PUT `/api/credit-cards/:id`. Precarga + opción de eliminar |
+| 25 | `25-detalle-tarjeta.md` | Detalle tarjeta | ✅ | 🚧 | Info + barra de límite + ciclo actual + gastos asociados + próximo pago |
+
+---
+
 ## Pantallas de Deudas
 
 | # | Archivo | Pantalla | Estado Docs | Estado Código | Notas |
@@ -95,11 +106,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Total de pantallas | 25 |
-| Documentadas (✅) | 25 |
+| Total de pantallas | 29 |
+| Documentadas (✅) | 29 |
 | En revisión (🔄) | 0 |
 | Pendientes de doc (⬜) | 0 |
-| Pendientes de código (🚧) | 25 |
+| Pendientes de código (🚧) | 29 |
 | Features planificadas para v2 | 10 |
 
 ---

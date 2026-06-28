@@ -18,6 +18,7 @@ export const createExpenseSchema = z.object({
   description: z.string().max(200).optional().default(''),
   date: z.string().regex(dateRegex, 'Formato de fecha inválido (YYYY-MM-DD)'),
   paymentType: z.enum(['cash', 'credit_card', 'debit_card', 'transfer']).optional().default('cash'),
+  creditCardId: z.string().optional(),
   isEssential: z.boolean().optional().default(false),
 })
 

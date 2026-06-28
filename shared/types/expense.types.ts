@@ -6,6 +6,8 @@ export type ExpenseCategory =
   | 'health'
   | 'education'
   | 'entertainment'
+  | 'savings'
+  | 'debt'
   | 'other'
 
 export type PaymentType = 'cash' | 'credit_card' | 'debit_card' | 'transfer'
@@ -29,8 +31,10 @@ export interface ExpenseData {
   description: string
   date: string
   paymentType: 'cash' | 'credit_card' | 'debit_card' | 'transfer'
+  creditCardId?: string
   isEssential: boolean
   createdBy: string
+  createdByName?: string
   createdAt: string
 }
 
@@ -39,6 +43,7 @@ export interface ICreateExpenseRequest {
   amount: number
   category: ExpenseCategory
   paymentType: PaymentType
+  creditCardId?: string
   date?: string
   userId?: string
 }
@@ -51,5 +56,6 @@ export interface IUpdateExpenseRequest {
   amount?: number
   category?: ExpenseCategory
   paymentType?: PaymentType
+  creditCardId?: string
   date?: string
 }

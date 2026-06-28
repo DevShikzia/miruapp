@@ -1,11 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser'
-import { Router, ActivatedRoute } from '@angular/router'
+import { Router, ActivatedRoute, RouterLink } from '@angular/router'
 import { NgIf, NgFor } from '@angular/common'
 import { Subject, takeUntil } from 'rxjs'
 import { ApiService } from '../../../services/api.service'
+import { TarjetasService } from '../../../services/tarjetas.service'
+import { CategoryLabelPipe } from '../../../pipes/category-label.pipe'
 import type { ExpenseCategory, PaymentType, ExpenseData } from '@shared/types/expense.types'
+import type { CreditCardData } from '@shared/types/credit-card.types'
 
 interface CategoryOption {
   key: ExpenseCategory
@@ -28,6 +31,8 @@ const CATEGORIES: CategoryOption[] = [
   { key: 'health', label: 'Salud', color: '#E05252', icon: 'heart-pulse' },
   { key: 'education', label: 'Educaci\u00f3n', color: '#5B8DEF', icon: 'book-open' },
   { key: 'entertainment', label: 'Entretenimiento', color: '#9B6EF3', icon: 'gamepad-2' },
+  { key: 'savings', label: 'Ahorros', color: '#15C48C', icon: 'piggy-bank' },
+  { key: 'debt', label: 'Deudas', color: '#E05252', icon: 'landmark' },
   { key: 'other', label: 'Otro', color: '#8A95A8', icon: 'ellipsis' },
 ]
 
@@ -47,6 +52,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   'book-open': '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3Z"/>',
   'gamepad-2': '<path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5Z"/>',
   ellipsis: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  'piggy-bank': '<path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/>',
+  landmark: '<path d="M3 22h18"/><path d="M6 18v-8"/><path d="M10 18v-8"/><path d="M14 18v-8"/><path d="M18 18v-8"/><path d="M12 2 3 7h18Z"/>',
 }
 
 const PAYMENT_ICONS: Record<string, string> = {
@@ -58,7 +65,7 @@ const PAYMENT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-edit-expense',
   standalone: true,
-  imports: [FormsModule, NgIf, NgFor],
+  imports: [FormsModule, NgIf, NgFor, RouterLink, CategoryLabelPipe],
   template: `
     <div class="container">
       <header class="header">
@@ -111,7 +118,7 @@ const PAYMENT_ICONS: Record<string, string> = {
               <div class="category-icon" [style.color]="cat.color">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" [innerHTML]="getCategoryIcon(cat.icon)"></svg>
               </div>
-              <span class="category-label">{{ cat.label }}</span>
+              <span class="category-label">{{ cat.key | categoryLabel }}</span>
             </button>
           </div>
         </div>
@@ -129,6 +136,32 @@ const PAYMENT_ICONS: Record<string, string> = {
               {{ pt.label }}
             </button>
           </div>
+        </div>
+
+        <div class="card-selector-section" *ngIf="paymentType === 'credit_card'">
+          <label class="field-label">Tarjeta de cr\u00e9dito</label>
+          <div class="card-select" *ngIf="!loadingCards">
+            <button
+              class="card-option"
+              *ngFor="let card of creditCards"
+              [class.selected]="creditCardId === card._id"
+              [style.--card-color]="card.color || '#E4B3E9'"
+              (click)="creditCardId = card._id"
+            >
+              <div class="card-indicator" [style.background]="card.color || '#E4B3E9'"></div>
+              <div class="card-info">
+                <span class="card-name">{{ card.name }}</span>
+                <span class="card-meta" *ngIf="card.lastFourDigits">**** {{ card.lastFourDigits }}</span>
+              </div>
+              <svg *ngIf="creditCardId === card._id" class="card-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15C48C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+          <div class="card-select-loading" *ngIf="loadingCards">
+            <span class="loading-dots">Cargando tarjetas...</span>
+          </div>
+          <p class="card-select-empty" *ngIf="!loadingCards && creditCards.length === 0">
+            No hay tarjetas activas. <a routerLink="/tarjetas/nueva" class="card-create-link">Crear tarjeta</a>
+          </p>
         </div>
 
         <div class="desc-section">
@@ -215,6 +248,19 @@ const PAYMENT_ICONS: Record<string, string> = {
     .payment-chip { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; background: #1E2530; border: 1px solid transparent; border-radius: 999px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 150ms; }
     .payment-chip.selected { border-color: #E05252; background: rgba(224,82,82,0.08); }
 
+    .card-selector-section { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .card-select { display: flex; flex-direction: column; gap: 8px; }
+    .card-option { display: flex; align-items: center; gap: 12px; width: 100%; height: 52px; padding: 0 14px; background: #161B24; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; cursor: pointer; transition: all 150ms; }
+    .card-option.selected { border-color: var(--card-color, #E4B3E9); background: rgba(228,179,233,0.06); }
+    .card-indicator { width: 6px; height: 28px; border-radius: 3px; flex-shrink: 0; }
+    .card-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    .card-name { font-size: 13px; font-weight: 500; color: #F0F2F5; }
+    .card-meta { font-size: 11px; font-weight: 400; color: #697586; }
+    .card-check { flex-shrink: 0; }
+    .card-select-loading { padding: 12px 0; }
+    .loading-dots { font-size: 12px; color: #697586; }
+    .card-select-empty { font-size: 12px; color: #697586; text-align: center; padding: 12px 0; }
+    .card-create-link { color: #E4B3E9; text-decoration: none; font-weight: 600; }
     .desc-section { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
     .desc-input { background: #1E2530; border: 1px solid transparent; border-radius: 16px; height: 48px; padding: 0 16px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; outline: none; transition: border-color 150ms; }
     .desc-input:focus { border-color: #E05252; }
@@ -260,6 +306,9 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
 
   categories = CATEGORIES
   paymentTypes = PAYMENT_TYPES
+  creditCards: CreditCardData[] = []
+  creditCardId: string | null = null
+  loadingCards = false
   private destroy$ = new Subject<void>()
 
   constructor(
@@ -267,6 +316,7 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
+    private tarjetasService: TarjetasService,
   ) {}
 
   get dirty(): boolean {
@@ -275,15 +325,32 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
       this.amount !== this.original.amount ||
       this.category !== this.original.category ||
       this.paymentType !== this.original.paymentType ||
-      this.description !== (this.original.description || '')
+      this.description !== (this.original.description || '') ||
+      (this.creditCardId ?? undefined) !== (this.original.creditCardId ?? undefined)
     )
   }
 
   ngOnInit(): void {
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.expenseId = params['id']
+      this.loadCards()
       this.loadExpense()
     })
+  }
+
+  private loadCards(): void {
+    this.loadingCards = true
+    this.tarjetasService.getAll()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (cards) => {
+          this.creditCards = cards.filter(c => c.isActive)
+          this.loadingCards = false
+        },
+        error: () => {
+          this.loadingCards = false
+        },
+      })
   }
 
   ngOnDestroy(): void {
@@ -304,6 +371,7 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
           this.category = data.category as ExpenseCategory
           this.paymentType = data.paymentType || 'cash'
           this.description = data.description || ''
+          this.creditCardId = data.creditCardId || null
           this.state = 'loaded'
         },
         error: () => {
@@ -407,6 +475,7 @@ export class EditExpenseComponent implements OnInit, OnDestroy {
       category: this.category,
       paymentType: this.paymentType,
       description: this.description || undefined,
+      creditCardId: this.paymentType === 'credit_card' ? this.creditCardId : undefined,
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({

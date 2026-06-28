@@ -1047,6 +1047,241 @@ Marca todas las notificaciones como leídas.
 
 ---
 
+### 11. Tarjetas de Crédito (`/api/credit-cards`)
+
+> Todos los endpoints de Tarjetas requieren autenticación y membresía familiar.
+> Roles de familia: `family_admin` y `member` pueden crear/editar/eliminar. `readonly` solo puede ver.
+
+---
+
+#### `GET /api/credit-cards`
+
+Obtiene las tarjetas de crédito registradas en la familia.
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`, `member`, `readonly`
+
+**Response `200` — Success:**
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439090",
+      "familyId": "507f1f77bcf86cd799439012",
+      "createdBy": "507f1f77bcf86cd799439011",
+      "name": "Visa Platino",
+      "lastFourDigits": "4523",
+      "brand": "visa",
+      "closingDay": 15,
+      "dueDay": 5,
+      "creditLimit": 500000,
+      "bankName": "Banco Nación",
+      "color": "#5B8DEF",
+      "notes": "Usar solo para emergencias",
+      "isActive": true,
+      "createdAt": "2026-06-01T10:00:00.000Z"
+    }
+  ],
+  "total": 1,
+  "mensaje": "Operación exitosa"
+}
+```
+
+---
+
+#### `POST /api/credit-cards`
+
+Registra una nueva tarjeta de crédito en la familia.
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`, `member`
+
+**Request body:**
+| Campo | Tipo | Obligatorio | Validación |
+|-------|------|:-----------:|------------|
+| `name` | `string` | ✅ | 2-50 caracteres |
+| `brand` | `string` | ✅ | `visa`, `mastercard`, `amex`, `other` |
+| `closingDay` | `number` | ✅ | 1-28 |
+| `dueDay` | `number` | ✅ | 1-28 |
+| `lastFourDigits` | `string` | ❌ | 4 dígitos numéricos |
+| `creditLimit` | `number` | ❌ | > 0 |
+| `bankName` | `string` | ❌ | Máximo 50 caracteres |
+| `color` | `string` | ❌ | Hex color (`#RRGGBB`) |
+| `notes` | `string` | ❌ | Máximo 200 caracteres |
+
+**Response `201` — Success:**
+```json
+{
+  "ok": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439090",
+    "familyId": "507f1f77bcf86cd799439012",
+    "createdBy": "507f1f77bcf86cd799439011",
+    "name": "Visa Platino",
+    "brand": "visa",
+    "closingDay": 15,
+    "dueDay": 5,
+    "creditLimit": 500000,
+    "bankName": "Banco Nación",
+    "color": "#5B8DEF",
+    "isActive": true,
+    "createdAt": "2026-06-01T10:00:00.000Z"
+  },
+  "mensaje": "Tarjeta registrada correctamente"
+}
+```
+
+**Response `400` — Error de validación:**
+```json
+{
+  "ok": false,
+  "error": "Error de validación",
+  "detalles": [
+    { "campo": "closingDay", "mensaje": "El día de cierre debe ser entre 1 y 28" },
+    { "campo": "dueDay", "mensaje": "El día de vencimiento debe ser entre 1 y 28" }
+  ]
+}
+```
+
+---
+
+#### `GET /api/credit-cards/:id`
+
+Obtiene el detalle de una tarjeta específica.
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`, `member`, `readonly`
+
+**Response `200` — Success:** Misma estructura que `GET /api/credit-cards` para un solo item.
+
+**Response `404`:**
+```json
+{
+  "ok": false,
+  "error": "Tarjeta no encontrada"
+}
+```
+
+---
+
+#### `PUT /api/credit-cards/:id`
+
+Actualiza los datos de una tarjeta de crédito. Todos los campos son opcionales en la actualización.
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`, `member`
+
+**Request body:** Mismos campos que `POST /api/credit-cards`, todos opcionales.
+
+**Response `200` — Success:**
+```json
+{
+  "ok": true,
+  "data": { /* CreditCardData actualizado */ },
+  "mensaje": "Tarjeta actualizada correctamente"
+}
+```
+
+---
+
+#### `DELETE /api/credit-cards/:id`
+
+Elimina una tarjeta de crédito. Los gastos asociados a esta tarjeta conservan el `creditCardId` pero quedan huérfanos (no se eliminan).
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`, `member`
+
+**Response `200` — Success:**
+```json
+{
+  "ok": true,
+  "mensaje": "Tarjeta eliminada correctamente"
+}
+```
+
+---
+
+#### `GET /api/credit-cards/:id/statement`
+
+Obtiene el resumen del ciclo actual de facturación de la tarjeta. El ciclo se calcula automáticamente según el día de cierre de la tarjeta.
+
+**Auth:** ✅ Requiere Bearer token
+**Roles:** `family_admin`, `member`, `readonly`
+
+**Query params:**
+| Parámetro | Tipo | Obligatorio | Descripción |
+|-----------|------|:-----------:|-------------|
+| `month` | `string` | ❌ | Formato `YYYY-MM`. Default: mes actual |
+
+**Response `200` — Success:**
+```json
+{
+  "ok": true,
+  "data": {
+    "cardId": "507f1f77bcf86cd799439090",
+    "cardName": "Visa Platino",
+    "periodStart": "2026-06-16",
+    "periodEnd": "2026-07-15",
+    "dueDate": "2026-08-05",
+    "totalAmount": 142500,
+    "expenses": [
+      {
+        "_id": "507f1f77bcf86cd799439091",
+        "amount": 85000,
+        "category": "food",
+        "description": "Cena familiar",
+        "date": "2026-06-20",
+        "createdBy": "507f1f77bcf86cd799439011"
+      },
+      {
+        "_id": "507f1f77bcf86cd799439092",
+        "amount": 57500,
+        "category": "entertainment",
+        "description": "Streaming anual",
+        "date": "2026-07-01",
+        "createdBy": "507f1f77bcf86cd799439013"
+      }
+    ]
+  },
+  "mensaje": "Operación exitosa"
+}
+```
+
+---
+
+### 12. Gastos — Campo `creditCardId`
+
+Cuando se crea o actualiza un gasto con `paymentType: 'credit_card'`, se puede especificar opcionalmente a qué tarjeta está asociado mediante el campo `creditCardId`.
+
+**Modificación en `POST /api/finance/expenses`:**
+| Campo | Tipo | Obligatorio | Validación |
+|-------|------|:-----------:|------------|
+| `creditCardId` | `string` | ❌ | Solo válido si `paymentType === 'credit_card'`. Debe ser un ObjectId válido de una tarjeta existente en la familia |
+
+**Response `201` — Success (con tarjeta asociada):**
+```json
+{
+  "ok": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439091",
+    "familyId": "507f1f77bcf86cd799439012",
+    "amount": 85000,
+    "category": "food",
+    "description": "Cena familiar",
+    "date": "2026-06-20",
+    "paymentType": "credit_card",
+    "creditCardId": "507f1f77bcf86cd799439090",
+    "isEssential": false,
+    "createdBy": "507f1f77bcf86cd799439011",
+    "createdAt": "2026-06-20T22:30:00.000Z"
+  },
+  "mensaje": "Gasto registrado correctamente"
+}
+```
+
+---
+
 ## Resumen de middlewares
 
 | Middleware | Descripción | Se aplica en |

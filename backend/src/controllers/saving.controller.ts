@@ -42,7 +42,7 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
 
 export async function addContribution(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const result = await savingService.addContribution(req.params.id, req.body, getFamilyId(req))
+    const result = await savingService.addContribution(req.params.id, req.body, getFamilyId(req), req.user!._id)
     sendSuccess(res, result, 'Contribución registrada correctamente')
   } catch (error) { next(error) }
 }

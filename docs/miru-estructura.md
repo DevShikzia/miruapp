@@ -31,6 +31,7 @@ backend/
 │   │   ├── finance.controller.ts  → incomes, expenses, recurring-bills
 │   │   ├── debt.controller.ts
 │   │   ├── saving.controller.ts
+│   │   ├── creditCard.controller.ts
 │   │   └── extra.controller.ts    → dashboard, checklist, notifications
 │   │
 │   ├── models/
@@ -50,6 +51,7 @@ backend/
 │   │   ├── finance.routes.ts      → incomes, expenses, recurring-bills
 │   │   ├── debt.routes.ts
 │   │   ├── saving.routes.ts
+│   │   ├── creditCard.routes.ts
 │   │   └── extra.routes.ts        → dashboard, checklist, notifications
 │   │
 │   ├── middlewares/
@@ -67,6 +69,7 @@ backend/
 │   │   ├── recurringBill.service.ts
 │   │   ├── debt.service.ts
 │   │   ├── saving.service.ts
+│   │   ├── creditCard.service.ts
 │   │   ├── checklist.service.ts
 │   │   ├── notification.service.ts
 │   │   ├── dashboard.service.ts
@@ -79,6 +82,7 @@ backend/
 │   │   ├── finance.schema.ts        → incomes, expenses, recurring-bills
 │   │   ├── debt.schema.ts
 │   │   ├── saving.schema.ts
+│   │   ├── credit-card.schema.ts
 │   │   └── extra.schema.ts          → checklist, notifications
 │   │
 │   ├── utils/
@@ -182,6 +186,24 @@ backend/
 }
 ```
 
+### CreditCard
+```typescript
+{
+  _id, familyId, createdBy,
+  name: string,                 → "Visa Platino", "Mastercard Black"
+  lastFourDigits: string,       → últimos 4 dígitos (opcional)
+  brand: 'visa' | 'mastercard' | 'amex' | 'other',
+  closingDay: number,           → día de cierre (1-28)
+  dueDay: number,               → día de vencimiento (1-28)
+  creditLimit: number,          → límite de crédito (opcional)
+  bankName: string,             → banco emisor (opcional)
+  color: string,                → color para UI (opcional)
+  notes: string,                → notas (opcional)
+  isActive: boolean,
+  createdAt
+}
+```
+
 ### Checklist
 ```typescript
 {
@@ -252,6 +274,12 @@ frontend/
 │   │   │   ├── lista-metas/
 │   │   │   ├── form-meta/
 │   │   │   └── ahorro.service.ts
+│   │   │
+│   │   ├── tarjetas/
+│   │   │   ├── lista-tarjetas/
+│   │   │   ├── detalle-tarjeta/
+│   │   │   ├── form-tarjeta/
+│   │   │   └── tarjetas.service.ts
 │   │   │
 │   │   ├── checklist/
 │   │   │   └── checklist.service.ts
@@ -335,6 +363,16 @@ DELETE /api/debts/:id             → eliminar deuda
 POST   /api/debts/:id/payments    → agregar pago
 PUT    /api/debts/:id/payments/:paymentIndex   → editar pago
 DELETE /api/debts/:id/payments/:paymentIndex   → eliminar pago
+```
+
+### Tarjetas de Crédito (`/api/credit-cards`)
+```
+GET    /api/credit-cards               → listar tarjetas de la familia
+POST   /api/credit-cards               → crear tarjeta
+GET    /api/credit-cards/:id           → detalle de tarjeta
+PUT    /api/credit-cards/:id           → actualizar tarjeta
+DELETE /api/credit-cards/:id           → eliminar tarjeta
+GET    /api/credit-cards/:id/statement → gastos del ciclo actual de la tarjeta
 ```
 
 ### Ahorro (`/api/savings`)

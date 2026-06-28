@@ -28,6 +28,7 @@ export interface IncomeData {
   date: string
   isRecurring: boolean
   createdBy: string
+  createdByName?: string
   createdAt: string
 }
 

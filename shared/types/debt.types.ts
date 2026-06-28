@@ -1,3 +1,5 @@
+import type { PaymentType } from './expense.types'
+
 export type DebtType = 'fixed' | 'credit'
 export type DebtDirection = 'i_owe' | 'they_owe_me'
 
@@ -107,6 +109,8 @@ export interface CreatePaymentRequest {
   date: string
   description?: string
   paidBy?: string
+  paymentType?: PaymentType
+  creditCardId?: string
 }
 
 export interface UpdatePaymentRequest {

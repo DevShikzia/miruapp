@@ -4,8 +4,11 @@ import { FormsModule } from '@angular/forms'
 import { NgIf, NgFor, DecimalPipe } from '@angular/common'
 import { Subject, takeUntil } from 'rxjs'
 import { ApiService } from '../../services/api.service'
+import { TarjetasService } from '../../services/tarjetas.service'
 import { GoalEmojiPipe } from '../../pipes/goal-emoji.pipe'
 import type { SavingData, AddContributionRequest } from '@shared/types/saving.types'
+import type { PaymentType } from '@shared/types/expense.types'
+import type { CreditCardData } from '@shared/types/credit-card.types'
 
 @Component({
   selector: 'app-savings',
@@ -146,6 +149,20 @@ import type { SavingData, AddContributionRequest } from '@shared/types/saving.ty
             <input class="sheet-date" [(ngModel)]="contributeDate" name="contributeDate" type="date" />
           </div>
 
+          <div class="pay-type-row">
+            <button class="pay-type-btn" *ngFor="let pt of PAYMENT_TYPES" [class.selected]="paymentType === pt.key" (click)="selectPaymentType(pt.key)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="12" y2="12"/></svg>
+              <span>{{ pt.label }}</span>
+            </button>
+          </div>
+
+          <div class="card-selector-section" *ngIf="paymentType === 'credit_card'">
+            <select class="card-select" [(ngModel)]="creditCardId" name="creditCardId">
+              <option value="" disabled selected>Seleccionar tarjeta</option>
+              <option *ngFor="let card of creditCards" [value]="card._id">{{ card.name }} {{ card.lastFourDigits ? '•••• ' + card.lastFourDigits : '' }}</option>
+            </select>
+          </div>
+
           <p class="sheet-error" *ngIf="contributeError">{{ contributeError }}</p>
 
           <button class="btn-save" [disabled]="contributeAmount <= 0 || contributeSaving" (click)="submitContribution()">
@@ -261,6 +278,13 @@ import type { SavingData, AddContributionRequest } from '@shared/types/saving.ty
 
     .sheet-error { color: #F87171; font-size: 12px; font-weight: 400; text-align: center; margin: 8px 0 0; }
 
+    .pay-type-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+    .pay-type-btn { flex: 1; min-width: 80px; height: 36px; background: #161B24; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 150ms; }
+    .pay-type-btn.selected { background: rgba(201,154,10,0.15); border-color: #C99A0A; color: #C99A0A; }
+    .card-selector-section { margin-top: 8px; }
+    .card-select { width: 100%; height: 40px; background: #161B24; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; padding: 0 12px; outline: none; }
+    .card-select option { background: #1E2530; color: #F0F2F5; }
+
     .btn-save { width: 100%; height: 44px; margin-top: 16px; background: #C99A0A; color: #0C0F14; border: none; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 150ms; }
     .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
     .save-spinner { display: flex; align-items: center; }
@@ -284,6 +308,13 @@ export class SavingsComponent {
   savings: SavingData[] = []
   private destroy$ = new Subject<void>()
 
+  PAYMENT_TYPES = [
+    { key: 'cash' as PaymentType, label: 'Efectivo' },
+    { key: 'credit_card' as PaymentType, label: 'Crédito' },
+    { key: 'debit_card' as PaymentType, label: 'Débito' },
+    { key: 'transfer' as PaymentType, label: 'Transferencia' },
+  ]
+
   contributeGoal: SavingData | null = null
   showContributeModal = false
   contributeAmount = 0
@@ -291,6 +322,9 @@ export class SavingsComponent {
   contributeDate = ''
   contributeSaving = false
   contributeError = ''
+  paymentType: PaymentType = 'cash'
+  creditCardId = ''
+  creditCards: CreditCardData[] = []
 
   openMenuId: string | null = null
   pullDistance = 0
@@ -301,6 +335,7 @@ export class SavingsComponent {
     private api: ApiService,
     private router: Router,
     private cdr: ChangeDetectorRef,
+    private tarjetasService: TarjetasService,
   ) {
     this.loadSavings()
   }
@@ -369,6 +404,11 @@ export class SavingsComponent {
     this.contributeAmountDisplay = ''
     this.contributeDate = new Date().toISOString().split('T')[0]
     this.contributeError = ''
+    this.paymentType = 'cash'
+    this.creditCardId = ''
+    this.tarjetasService.getAll().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (cards) => { this.creditCards = cards ?? [] },
+    })
     this.showContributeModal = true
   }
 
@@ -389,8 +429,14 @@ export class SavingsComponent {
     input.value = this.contributeAmountDisplay
   }
 
+  selectPaymentType(pt: PaymentType): void {
+    this.paymentType = pt
+    if (pt !== 'credit_card') this.creditCardId = ''
+  }
+
   submitContribution(): void {
     if (!this.contributeGoal || this.contributeAmount <= 0) return
+    if (this.paymentType === 'credit_card' && !this.creditCardId) return
 
     this.contributeSaving = true
     this.contributeError = ''
@@ -398,6 +444,8 @@ export class SavingsComponent {
     const payload: AddContributionRequest = {
       amount: this.contributeAmount,
       date: this.contributeDate,
+      paymentType: this.paymentType,
+      creditCardId: this.paymentType === 'credit_card' ? this.creditCardId : undefined,
     }
 
     this.api.post<AddContributionRequest>('/savings/' + this.contributeGoal._id + '/contributions', payload)

@@ -1,4 +1,5 @@
 import { SavingModel, ISavingDocument } from '../models/Saving.model'
+import { ExpenseModel } from '../models/Expense.model'
 import {
   CreateSavingRequest, UpdateSavingRequest,
   AddContributionRequest,
@@ -68,12 +69,26 @@ export async function remove(id: string, familyId: string): Promise<void> {
   if (result.deletedCount === 0) throw new NotFoundError('Ahorro no encontrado')
 }
 
-export async function addContribution(id: string, data: AddContributionRequest, familyId: string): Promise<SavingData> {
+export async function addContribution(id: string, data: AddContributionRequest, familyId: string, userId: string): Promise<SavingData> {
   const doc = await SavingModel.findOne({ _id: id, familyId })
   if (!doc) throw new NotFoundError('Ahorro no encontrado')
 
   doc.contributions.push({ amount: data.amount, date: data.date })
   await doc.save()
+
+  if (data.paymentType) {
+    await ExpenseModel.create({
+      amount: data.amount,
+      category: 'savings',
+      description: `Ahorro: ${doc.name}`,
+      date: data.date,
+      paymentType: data.paymentType,
+      creditCardId: data.creditCardId,
+      familyId,
+      createdBy: userId,
+      isEssential: false,
+    })
+  }
 
   return toSavingData(doc)
 }

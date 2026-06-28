@@ -90,6 +90,47 @@ Margin top: 16px.
 
 ---
 
+### 4b. Selector de tarjeta de crédito (condicional)
+
+Aparece solo cuando el tipo de pago seleccionado es **"Tarjeta crédito"**. Slide down animation 200ms.
+
+- **Label:** *"Seleccionar tarjeta"* — Inter 500, 12px, `#8A95A8`, margin-bottom 8px
+- **Dropdown/chips de tarjetas registradas:**
+
+```
+┌─────────────────────────────────────┐
+│  [🟦] Visa Platino  •••• 4523      │
+│        Cierre: 15  Vence: 5        │
+└─────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  [🟪] Mastercard Black  •••• 8821  │
+│        Cierre: 10  Vence: 28       │
+└─────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  [➕] Agregar nueva tarjeta         │
+└─────────────────────────────────────┘
+```
+
+Cada opción es una card de 48px de alto, fondo `#1E2530`, radio 12px, padding 12px 16px, margin-bottom 6px.
+
+| Elemento | Estilo |
+|----------|--------|
+| Indicador color | Círculo 10px del color de la tarjeta |
+| Nombre tarjeta | Inter 500, 13px, `#F0F2F5` |
+| Últimos dígitos | Inter 400, 11px, `#697586` |
+| Info cierre/vence | Inter 400, 10px, `#8A95A8` |
+| Opción seleccionada | Borde 1.5px `#E05252`, fondo `rgba(224,82,82,0.08)` |
+
+**Última opción "Agregar nueva tarjeta":**
+- Fondo `transparente`, borde 1px dashed `rgba(255,255,255,0.1)`
+- Ícono `plus` Lucide, 14px, `#5B8DEF`
+- Texto Inter 500, 13px, `#5B8DEF`
+- Al tocarlo navega a crear tarjeta (`/tarjetas/nueva`) sin perder el formulario actual
+
+**Estado vacío:** Si no hay tarjetas registradas, mostrar solo la opción "Agregar nueva tarjeta" con texto *"No tenés tarjetas registradas. Agregá una nueva."*
+
+---
+
 ### 5. Campo opcional: descripción
 Margin top: 16px.
 
@@ -148,6 +189,9 @@ Margin top: 24px.
 - El monto usa formateo automático con separadores de miles
 - El cursor rojo `#E05252` refuerza visualmente que es un gasto
 - Al seleccionar categoría, la card escala 1.02 y vuelve a 1.0 en 150ms
+- Al seleccionar "Tarjeta crédito" como tipo de pago, el selector de tarjetas aparece con slide down de 200ms
+- Al cambiar a otro tipo de pago, el selector de tarjetas se oculta con slide up de 200ms
+- Al seleccionar "Agregar nueva tarjeta", se guarda el formulario actual y se navega a creación de tarjeta
 - Al activar toggle recurrente, el selector de día aparece con slide down de 200ms
 - Guardado exitoso limpia el formulario y redirige
 
@@ -181,6 +225,7 @@ Margin top: 24px.
 | Método | Endpoint | Descripción |
 |---|---|---|
 | POST | `/api/finance/expenses` | Crear nuevo gasto |
+| GET | `/api/credit-cards` | Listar tarjetas para el selector |
 
 ## Dependencias del backend
 
@@ -190,3 +235,5 @@ Margin top: 24px.
 | Service | `services/expense.service.ts` | Reglas de negocio de gastos |
 | Schema | `schemas/finance.schema.ts` | Validación Zod de gasto |
 | Model | `models/Expense.model.ts` | Schema de MongoDB |
+| Service | `services/creditCard.service.ts` | Consulta de tarjetas para el selector |
+| Types | `shared/types/credit-card.types.ts` | Tipos de tarjeta en el selector |

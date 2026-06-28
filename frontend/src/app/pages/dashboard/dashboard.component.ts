@@ -1,14 +1,17 @@
 import { Component, ChangeDetectorRef } from '@angular/core'
 import { Router, RouterLink } from '@angular/router'
-import { NgIf, NgFor, NgClass, DecimalPipe } from '@angular/common'
+import { NgIf, NgFor, NgClass, DecimalPipe, DatePipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { ApiService } from '../../services/api.service'
+import { CategoryLabelPipe } from '../../pipes/category-label.pipe'
 import type { IChecklistItem, IChecklistSummary, IChecklistResponse } from '@shared/types/checklist.types'
 
 interface Transaction {
   name: string
   category: string
   date: string
+  createdAt: string
+  createdBy: string
   amount: number
   type: 'income' | 'expense'
 }
@@ -26,7 +29,7 @@ interface DashboardData {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [NgIf, NgFor, NgClass, DecimalPipe, RouterLink, FormsModule],
+  imports: [NgIf, NgFor, NgClass, DecimalPipe, DatePipe, RouterLink, FormsModule, CategoryLabelPipe],
   template: `
     <!-- Loading state -->
     <div class="dashboard" *ngIf="state === 'loading'">
@@ -130,8 +133,8 @@ interface DashboardData {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
             </div>
             <div class="tx-info">
-              <span class="tx-name">{{ tx.name }}</span>
-              <span class="tx-meta">{{ tx.category }} · {{ tx.date }}</span>
+              <span class="tx-name">{{ tx.name | categoryLabel }}</span>
+              <span class="tx-meta">{{ tx.category | categoryLabel }} · {{ tx.date }} {{ tx.createdAt | date:'HH:mm' }} · {{ tx.createdBy }}</span>
             </div>
             <span class="tx-amount" [class.income]="tx.type === 'income'" [class.expense]="tx.type === 'expense'">
               {{ tx.type === 'income' ? '+' : '-' }}$ {{ tx.amount | number:'1.0-0' }}

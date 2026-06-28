@@ -22,12 +22,13 @@ Pantalla principal de la app. Es lo primero que ve el usuario después del login
 
 Barra fija en la parte inferior, fondo `#161B24`, borde superior `rgba(255,255,255,0.06)` de 1px. Altura 64px.
 
-5 tabs distribuidas equitativamente:
+6 tabs distribuidas equitativamente:
 
 | Ícono (Lucide) | Label | Ruta |
 |---|---|---|
 | `layout-dashboard` | Inicio | `/dashboard` |
 | `arrow-up-down` | Movimientos | `/movimientos` |
+| `credit-card` | Tarjetas | `/tarjetas` |
 | `hand-coins` | Deudas | `/deudas` |
 | `piggy-bank` | Ahorros | `/ahorros` |
 | `users` | Familia | `/familia` |

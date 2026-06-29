@@ -144,6 +144,8 @@ export async function getStatement(cardId: string, familyId: string, month?: str
         totalAmount: item.totalAmount,
         totalInstallments: item.totalInstallments,
         installmentManual: item.installmentManual,
+        isPaid: !item.isActive,
+        startPeriod: item.startPeriod.toISOString(),
       })
     } else if (item.type === 'installment') {
       const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, item.totalInstallments || 1)
@@ -165,6 +167,8 @@ export async function getStatement(cardId: string, familyId: string, month?: str
           totalAmount: item.totalAmount,
           totalInstallments: item.totalInstallments,
           installmentManual: item.installmentManual,
+          isPaid: !item.isActive,
+          startPeriod: item.startPeriod.toISOString(),
         })
       }
     }

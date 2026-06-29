@@ -160,6 +160,11 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
           Agregar item
         </button>
 
+        <button class="btn-history" (click)="openHistoryModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Ver historial
+        </button>
+
         <div class="modal-overlay" *ngIf="showItemForm" (click)="closeItemForm()">
           <div class="modal-card" (click)="$event.stopPropagation()">
             <div class="modal-header">
@@ -316,6 +321,64 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
             </button>
           </div>
         </div>
+
+        <div class="modal-overlay" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+          <div class="modal-card modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <span class="modal-title">Historial de ciclos</span>
+              <button class="modal-close" (click)="closeHistoryModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+
+            <div class="history-list" *ngIf="!selectedHistoryPeriod">
+              <div class="history-item" *ngFor="let period of historyPeriods" (click)="selectHistoryPeriod(period)">
+                <div class="history-period-info">
+                  <span class="history-period-label">{{ period.label }}</span>
+                  <span class="history-period-dates">{{ period.start }} → {{ period.end }}</span>
+                </div>
+                <div class="history-period-right">
+                  <span class="history-amount">$ {{ period.total | number:'1.0-0':'es-AR' }}</span>
+                  <span class="history-status" [class.paid]="period.isPaid">{{ period.isPaid ? 'Pagado' : 'No pagado' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="history-detail" *ngIf="selectedHistoryPeriod">
+              <button class="btn-back-history" (click)="selectedHistoryPeriod = null">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Volver
+              </button>
+              <div class="history-detail-header">
+                <span>{{ selectedHistoryPeriod.label }}</span>
+                <span class="history-detail-amount">$ {{ selectedHistoryPeriod.total | number:'1.0-0':'es-AR' }}</span>
+              </div>
+              <div class="history-items-section" *ngIf="historyStatement && historyStatement.items.length > 0">
+                <div class="items-divider">
+                  <span class="items-divider-label">Items</span>
+                </div>
+                <div class="expense-list">
+                  <div class="expense-item" *ngFor="let item of historyStatement.items">
+                    <div class="expense-left">
+                      <span class="expense-category-icon">{{ getCategoryEmoji(item.category) }}</span>
+                      <div class="expense-info">
+                        <span class="expense-desc">{{ item.description }}</span>
+                        <span class="expense-date">{{ item.startPeriod | date:'dd/MM/yyyy' }}</span>
+                      </div>
+                    </div>
+                    <div class="expense-right">
+                      <span class="expense-amount">$ {{ item.amount | number:'1.0-0':'es-AR' }}</span>
+                      <span class="item-paid-badge" *ngIf="item.isPaid">Pagado</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="empty-history" *ngIf="!historyStatement || historyStatement.items.length === 0">
+                No hay items en este período
+              </div>
+            </div>
+          </div>
+        </div>
       </ng-container>
 
       <p class="error-msg" *ngIf="state === 'error'">
@@ -367,6 +430,30 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
     .payment-due { font-size: 12px; font-weight: 400; color: #8A95A8; margin-top: 4px; }
     .btn-pay { width: 100%; height: 40px; background: #22C55E; border: none; border-radius: 999px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: opacity 150ms; }
     .btn-pay:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-history { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 12px; transition: all 150ms; }
+    .btn-history:hover { background: rgba(255,255,255,0.08); color: #F0F2F5; }
+
+    .modal-large { max-height: 80vh; overflow-y: auto; }
+
+    .history-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .history-item { display: flex; align-items: center; justify-content: space-between; background: #1E2530; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: background 150ms; }
+    .history-item:hover { background: rgba(255,255,255,0.08); }
+    .history-period-info { display: flex; flex-direction: column; gap: 2px; }
+    .history-period-label { font-size: 14px; font-weight: 600; color: #F0F2F5; }
+    .history-period-dates { font-size: 11px; font-weight: 400; color: #697586; }
+    .history-period-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .history-amount { font-size: 14px; font-weight: 600; color: #F0F2F5; }
+    .history-status { font-size: 11px; font-weight: 500; color: #F87171; }
+    .history-status.paid { color: #22C55E; }
+
+    .history-detail { margin-top: 8px; }
+    .btn-back-history { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; padding: 0; margin-bottom: 12px; }
+    .btn-back-history:hover { color: #F0F2F5; }
+    .history-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 15px; font-weight: 600; color: #F0F2F5; }
+    .history-detail-amount { font-size: 18px; font-weight: 700; }
+    .empty-history { text-align: center; color: #697586; font-size: 13px; padding: 24px 0; }
+    .item-paid-badge { font-size: 10px; font-weight: 600; color: #22C55E; background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px; }
 
     .statement-section { margin-top: 20px; }
     .statement-header { display: flex; justify-content: space-between; align-items: center; }
@@ -477,6 +564,11 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
     paymentMethod: 'debit',
   }
 
+  showHistoryModal = false
+  historyPeriods: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string }[] = []
+  selectedHistoryPeriod: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string } | null = null
+  historyStatement: CardStatement | null = null
+
   private destroy$ = new Subject<void>()
 
   constructor(
@@ -575,6 +667,64 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
         next: () => {
           this.closePayModal()
           this.loadStatement()
+        },
+        error: () => {},
+      })
+  }
+
+  openHistoryModal(): void {
+    this.showHistoryModal = true
+    this.selectedHistoryPeriod = null
+    this.historyStatement = null
+    this.loadHistoryPeriods()
+  }
+
+  closeHistoryModal(): void {
+    this.showHistoryModal = false
+    this.selectedHistoryPeriod = null
+    this.historyStatement = null
+  }
+
+  private loadHistoryPeriods(): void {
+    const now = new Date()
+    const periods: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string }[] = []
+
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const year = d.getFullYear()
+      const month = d.getMonth() + 1
+      const monthStr = `${year}-${String(month).padStart(2, '0')}`
+      const label = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+
+      this.tarjetasService.getStatement(this.cardId, monthStr)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (stmt) => {
+            if (stmt.items.length > 0 || stmt.expenses.length > 0) {
+              periods.push({
+                label: label.charAt(0).toUpperCase() + label.slice(1),
+                start: stmt.periodStart,
+                end: stmt.periodEnd,
+                total: stmt.totalAmount,
+                isPaid: stmt.items.every(it => !it.isPaid),
+                month: monthStr,
+              })
+              periods.sort((a, b) => b.month.localeCompare(a.month))
+              this.historyPeriods = [...periods]
+            }
+          },
+          error: () => {},
+        })
+    }
+  }
+
+  selectHistoryPeriod(period: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string }): void {
+    this.selectedHistoryPeriod = period
+    this.tarjetasService.getStatement(this.cardId, period.month)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stmt) => {
+          this.historyStatement = stmt
         },
         error: () => {},
       })

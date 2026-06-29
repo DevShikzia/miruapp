@@ -55,6 +55,8 @@ export interface CardStatementItem {
   totalAmount?: number
   totalInstallments?: number
   installmentManual?: boolean
+  isPaid?: boolean
+  startPeriod?: string
 }
 
 export interface CardStatement {

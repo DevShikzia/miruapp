@@ -689,7 +689,7 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
     const now = new Date()
     const periods: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string }[] = []
 
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 0; i <= 5; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const year = d.getFullYear()
       const month = d.getMonth() + 1
@@ -700,18 +700,16 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (stmt) => {
-            if (stmt.items.length > 0 || stmt.expenses.length > 0) {
-              periods.push({
-                label: label.charAt(0).toUpperCase() + label.slice(1),
-                start: stmt.periodStart,
-                end: stmt.periodEnd,
-                total: stmt.totalAmount,
-                isPaid: stmt.items.every(it => !it.isPaid),
-                month: monthStr,
-              })
-              periods.sort((a, b) => b.month.localeCompare(a.month))
-              this.historyPeriods = [...periods]
-            }
+            periods.push({
+              label: label.charAt(0).toUpperCase() + label.slice(1),
+              start: stmt.periodStart,
+              end: stmt.periodEnd,
+              total: stmt.totalAmount,
+              isPaid: stmt.items.length > 0 ? stmt.items.every(it => it.isPaid) : false,
+              month: monthStr,
+            })
+            periods.sort((a, b) => b.month.localeCompare(a.month))
+            this.historyPeriods = [...periods]
           },
           error: () => {},
         })

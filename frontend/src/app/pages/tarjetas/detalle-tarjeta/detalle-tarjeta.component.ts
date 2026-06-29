@@ -216,8 +216,8 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
                   <span class="installment-suffix">cuotas</span>
                 </div>
               </div>
-              <div class="installment-calc" *ngIf="((itemForm.totalAmount ?? 0) > 0 || (itemForm.amount ?? 0) > 0) && (itemForm.totalInstallments ?? 0) > 0">
-                <span class="calc-label">{{ installmentInputMode === 'total' ? '= $ ' : 'Total: $ ' }}{{ installmentInputMode === 'total' ? (calculatedCuota | number:'1.0-0':'es-AR') : (((itemForm.amount ?? 0) * (itemForm.totalInstallments ?? 1)) | number:'1.0-0':'es-AR') }} {{ installmentInputMode === 'total' ? 'por cuota' : '' }}</span>
+              <div class="installment-calc" *ngIf="((itemForm.totalAmount ?? 0) > 0 || itemForm.amount > 0) && (itemForm.totalInstallments ?? 0) > 0">
+                <span class="calc-label">{{ installmentInputMode === 'total' ? '= $ ' : 'Total: $ ' }}{{ installmentInputMode === 'total' ? (calculatedCuota | number:'1.0-0':'es-AR') : ((itemForm.amount * (itemForm.totalInstallments ?? 1)) | number:'1.0-0':'es-AR') }} {{ installmentInputMode === 'total' ? 'por cuota' : '' }}</span>
                 <span class="calc-toggle" (click)="toggleInstallmentMode()">
                   {{ installmentInputMode === 'total' ? 'Ingresás por cuota' : 'Ingresás por total' }}
                 </span>

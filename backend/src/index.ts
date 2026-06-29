@@ -13,6 +13,7 @@ import savingRoutes from './routes/saving.routes'
 import extraRoutes from './routes/extra.routes'
 import creditCardRoutes from './routes/creditCard.routes'
 import cardItemRoutes from './routes/cardItem.routes'
+import taskRoutes from './routes/task.routes'
 import { initSocket } from './services/socket.service'
 import { startCronJobs } from './services/cron.service'
 
@@ -39,6 +40,7 @@ app.use('/api/savings', savingRoutes)
 app.use('/api', extraRoutes)
 app.use('/api/credit-cards', creditCardRoutes)
 app.use('/api/card-items', cardItemRoutes)
+app.use('/api/tasks', taskRoutes)
 app.use(errorMiddleware)
 
 async function start(): Promise<void> {

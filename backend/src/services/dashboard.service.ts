@@ -3,10 +3,10 @@ import { ExpenseModel } from '../models/Expense.model'
 import { DebtModel } from '../models/Debt.model'
 import { SavingModel } from '../models/Saving.model'
 import { CardItemModel } from '../models/CardItem.model'
-import * as checklistService from './checklist.service'
+import * as taskService from './task.service'
 import { UserModel } from '../models/User.model'
 
-import type { IChecklistSummary } from '@shared/types/checklist.types'
+import type { TaskData } from '@shared/types/task.types'
 import type { DashboardCardItem } from '@shared/types/credit-card.types'
 
 interface RecentTransaction {
@@ -32,7 +32,8 @@ interface DashboardData {
   cardItems: DashboardCardItem[]
   cardItemsTotal: number
   semaforo: 'verde' | 'amarillo' | 'rojo'
-  checklist: IChecklistSummary
+  pendingTasks: TaskData[]
+  pendingTasksCount: number
 }
 
 async function getMonthTotals(familyId: string, year: number, month: number) {
@@ -56,13 +57,13 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
   const startOfMonth = new Date(year, month, 1).toISOString().slice(0, 10)
   const endOfMonth = new Date(year, month + 1, 0).toISOString().slice(0, 10)
 
-  const [incomes, allExpenses, previous, debts, savings, checklist] = await Promise.all([
+  const [incomes, allExpenses, previous, debts, savings, pendingTasks] = await Promise.all([
     IncomeModel.find({ familyId, date: { $gte: startOfMonth, $lte: endOfMonth } }),
     ExpenseModel.find({ familyId, date: { $gte: startOfMonth, $lte: endOfMonth } }),
     getMonthTotals(familyId, year, month - 1),
     DebtModel.find({ familyId }),
     SavingModel.find({ familyId }),
-    checklistService.getOrCreate(familyId),
+    taskService.getAll(familyId),
   ])
 
   const cashExpenses = allExpenses.filter(e => e.paymentType !== 'credit_card')
@@ -146,6 +147,8 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
   }))
   const cardItemsTotal = dashboardCardItems.reduce((s, i) => s + i.amount, 0)
 
+  const incompleteTasks = pendingTasks.filter(t => !t.isCompleted)
+
   return {
     balance,
     variationPercent,
@@ -161,6 +164,7 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
     cardItems: dashboardCardItems,
     cardItemsTotal,
     semaforo,
-    checklist: checklist.summary,
+    pendingTasks: incompleteTasks.slice(0, 5),
+    pendingTasksCount: incompleteTasks.length,
   }
 }

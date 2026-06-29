@@ -1,11 +1,11 @@
 import { Component, ChangeDetectorRef, signal } from '@angular/core'
 import { Router, RouterLink } from '@angular/router'
-import { NgIf, NgFor, NgClass, DecimalPipe, DatePipe } from '@angular/common'
+import { NgIf, NgFor, NgClass, DecimalPipe, DatePipe, TitleCasePipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { ApiService } from '../../services/api.service'
 import { AuthService } from '../../services/auth.service'
 import { CategoryLabelPipe } from '../../pipes/category-label.pipe'
-import type { IChecklistItem, IChecklistSummary, IChecklistResponse } from '@shared/types/checklist.types'
+import type { TaskData } from '@shared/types/task.types'
 import type { DashboardCardItem } from '@shared/types/credit-card.types'
 
 interface Transaction {
@@ -28,6 +28,8 @@ interface DashboardData {
   savingGoal?: { name: string; current: number; target: number }
   cardItems: DashboardCardItem[]
   cardItemsTotal: number
+  pendingTasks: TaskData[]
+  pendingTasksCount: number
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -59,7 +61,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [NgIf, NgFor, NgClass, DecimalPipe, DatePipe, RouterLink, FormsModule, CategoryLabelPipe],
+  imports: [NgIf, NgFor, NgClass, DecimalPipe, DatePipe, TitleCasePipe, RouterLink, FormsModule, CategoryLabelPipe],
   template: `
     <!-- Loading state -->
     <div class="dashboard" *ngIf="state === 'loading'">
@@ -284,115 +286,27 @@ const CATEGORY_ICONS: Record<string, string> = {
         </div>
       </section>
 
-      <!-- Checklist mensual -->
+      <!-- Tareas pendientes -->
       <section class="section">
         <div class="section-header">
-          <h3>Checklist mensual</h3>
-          <a routerLink="/tareas" class="section-link">Ver lista completa →</a>
+          <h3>Tareas pendientes</h3>
+          <a routerLink="/tareas" class="section-link">Ver todas ({{ data.pendingTasksCount }}) →</a>
         </div>
 
-        <div class="cl-loading" *ngIf="clState === 'loading'">
-          <div class="skeleton" style="height:100px;border-radius:20px;"></div>
-          <div class="skeleton" style="height:52px;border-radius:16px;margin-top:12px;"></div>
-          <div class="skeleton" style="height:52px;border-radius:16px;margin-top:8px;"></div>
+        <div class="tasks-empty" *ngIf="data.pendingTasks.length === 0">
+          <p>No tenés tareas pendientes. ¡Bien ahí!</p>
         </div>
 
-        <div class="cl-error" *ngIf="clState === 'error'">
-          <span>No pudimos cargar el checklist</span>
-          <button (click)="loadChecklist()">Reintentar</button>
+        <div class="tasks-list">
+          <div class="task-item" *ngFor="let task of data.pendingTasks" [routerLink]="['/tareas', task._id]">
+            <div class="task-priority" [style.background]="getPriorityColor(task.priority)"></div>
+            <div class="task-info">
+              <span class="task-title">{{ task.title }}</span>
+              <span class="task-meta">{{ task.category | titlecase }}</span>
+            </div>
+            <svg class="task-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>
-
-        <ng-container *ngIf="clState === 'loaded'">
-          <!-- Month summary tappable -->
-          <div class="cl-summary" routerLink="/tareas">
-            <div class="cl-summary-left">
-              <span class="cl-month">{{ monthName }}</span>
-              <div class="cl-streak" *ngIf="clSummary.streak > 0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#E05252" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                <span>Llevás {{ clSummary.streak }} mes{{ clSummary.streak > 1 ? 'es' : '' }} seguido{{ clSummary.streak > 1 ? 's' : '' }} completando tu checklist</span>
-              </div>
-            </div>
-            <div class="cl-summary-right">
-              <div class="cl-circle">
-                <svg width="56" height="56" viewBox="0 0 56 56">
-                  <circle cx="28" cy="28" r="24" fill="none" stroke="#1E2530" stroke-width="4"/>
-                  <circle cx="28" cy="28" r="24" fill="none" stroke="#15C48C" stroke-width="4"
-                    stroke-dasharray="150.8" [attr.stroke-dashoffset]="150.8 - (150.8 * clSummary.percentage / 100)"
-                    stroke-linecap="round" transform="rotate(-90 28 28)"/>
-                </svg>
-                <span class="cl-circle-text">{{ clSummary.completed }}/{{ clSummary.total }}</span>
-              </div>
-              <svg class="cl-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-
-          <!-- Completed all -->
-          <div class="cl-celebration" *ngIf="clSummary.total > 0 && clSummary.percentage === 100 && showConfetti">
-            <div class="confetti-container">
-              <div class="confetti-piece" *ngFor="let _ of confettiPieces" [style.--x]="_.x" [style.--d]="_.d" [style.--c]="_.c"></div>
-            </div>
-            <p class="cl-done-text">¡Completaste todo!</p>
-            <p class="cl-done-sub">Mes de {{ monthName }} listo.</p>
-          </div>
-
-          <!-- Pending items -->
-          <div class="cl-items">
-            <div
-              class="cl-item"
-              *ngFor="let item of visibleItems; trackBy: itemTrackBy; let last = last"
-              [class.completed]="item.isCompleted"
-            >
-              <button class="cl-check" [class.checked]="item.isCompleted" (click)="toggleItem(item)" [disabled]="clToggling">
-                <svg *ngIf="item.isCompleted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F0F2F5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </button>
-              <div class="cl-item-info">
-                <span class="cl-item-name">{{ item.name }}</span>
-                <span class="cl-item-meta" *ngIf="item.category || item.dueDay">
-                  <span *ngIf="item.category" class="cl-tag">{{ item.category }}</span>
-                  <span *ngIf="item.dueDay">Vence el {{ item.dueDay | number:'2.0' }}</span>
-                </span>
-              </div>
-              <span class="cl-item-amount" *ngIf="item.amount">$ {{ item.amount | number:'1.0-0' }}</span>
-              <button class="cl-delete" *ngIf="item._id && item.isCompleted" (click)="deleteItem(item._id)" title="Eliminar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="cl-empty" *ngIf="clSummary.total === 0">
-            <p>Todavía no hay tareas para este mes. Agregá la primera.</p>
-          </div>
-
-          <!-- Add task -->
-          <div class="cl-add-wrap" *ngIf="!showAddTask">
-            <button class="cl-add-btn" (click)="showAddTask = true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-              Agregar tarea personalizada
-            </button>
-          </div>
-
-          <div class="cl-add-inline" *ngIf="showAddTask">
-            <input
-              class="cl-add-input"
-              [(ngModel)]="newTaskName"
-              name="newTaskName"
-              type="text"
-              placeholder="Nombre de la tarea"
-              maxlength="60"
-              (keyup.enter)="addCustomTask()"
-              autofocus
-            />
-            <div class="cl-add-actions">
-              <button class="cl-add-cancel" (click)="cancelAddTask()">Cancelar</button>
-              <button class="cl-add-confirm" [disabled]="!newTaskName.trim() || clAdding" (click)="addCustomTask()">
-                <span *ngIf="!clAdding">Agregar</span>
-                <span *ngIf="clAdding" class="add-spinner">
-                  <img src="/assets/miru-icon.svg" class="spinner-miru" alt="" />
-                </span>
-              </button>
-            </div>
-          </div>
-        </ng-container>
       </section>
 
       <!-- FAB Speed Dial -->
@@ -631,62 +545,17 @@ const CATEGORY_ICONS: Record<string, string> = {
     .saving-footer span:last-child { font-weight: 600; color: #C99A0A; }
     .saving-motivation { font-family: 'Inter', sans-serif; font-size: 12px; font-style: italic; color: #697586; margin: 8px 0 0; text-align: center; }
 
-    /* Checklist */
-    .cl-loading { display: flex; flex-direction: column; }
-    .cl-error { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #F87171; }
-    .cl-error button { background: #1E2530; border: none; border-radius: 999px; padding: 6px 12px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; }
-    .cl-summary {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      background: #161B24; border-radius: 24px; border: 1px solid rgba(255,255,255,0.06);
-      padding: 16px; gap: 12px; cursor: pointer; transition: opacity 0.15s;
-    }
-    .cl-summary:active { opacity: 0.8; }
-    .cl-summary-left { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .cl-month { font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 700; color: #F0F2F5; }
-    .cl-streak { display: flex; align-items: center; gap: 6px; }
-    .cl-streak span { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #8A95A8; }
-    .cl-summary-right { display: flex; align-items: center; gap: 8px; }
-    .cl-circle { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
-    .cl-circle-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: #F0F2F5; }
-    .cl-arrow { flex-shrink: 0; }
-    .cl-celebration { text-align: center; padding: 16px 0 8px; position: relative; overflow: hidden; }
-    .confetti-container { position: absolute; inset: 0; pointer-events: none; }
-    .confetti-piece { position: absolute; top: -8px; left: calc(var(--x) * 1%); width: 6px; height: 6px; border-radius: 2px; background: var(--c); animation: confettiFall 1s ease-out var(--d) forwards; opacity: 0; }
-    @keyframes confettiFall { 0% { opacity: 1; transform: translateY(0) rotate(0deg); } 100% { opacity: 0; transform: translateY(120px) rotate(360deg); } }
-    .cl-done-text { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: #15C48C; margin: 0; }
-    .cl-done-sub { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: #8A95A8; margin: 4px 0 0; }
-    .cl-items { display: flex; flex-direction: column; margin-top: 12px; }
-    .cl-item {
-      display: flex; align-items: center; gap: 10px; padding: 12px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-    .cl-item.completed { background: rgba(255,255,255,0.03); }
-    .cl-item.completed .cl-item-name { color: #8A95A8; text-decoration: line-through; }
-    .cl-check { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; flex-shrink: 0; position: relative; }
-    .cl-check::before { content: ''; width: 22px; height: 22px; border-radius: 6px; border: 2px solid #697586; background: transparent; position: absolute; transition: all 150ms; }
-    .cl-check.checked::before { background: #15C48C; border-color: #15C48C; transform: scale(1); }
-    .cl-check svg { position: relative; z-index: 1; }
-    .cl-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .cl-item-name { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: #F0F2F5; }
-    .cl-item-meta { display: flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 400; color: #697586; flex-wrap: wrap; }
-    .cl-tag { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 400; color: #C99A0A; background: rgba(201,154,10,0.12); border-radius: 4px; padding: 2px 6px; }
-    .cl-item-amount { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #F0F2F5; flex-shrink: 0; }
-    .cl-delete { background: none; border: none; padding: 4px; cursor: pointer; display: flex; flex-shrink: 0; }
-    .cl-empty { text-align: center; padding: 24px 0; }
-    .cl-empty p { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; color: #8A95A8; margin: 0; }
-    .cl-add-wrap { margin-top: 12px; }
-    .cl-add-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px; background: transparent; border: 1px dashed rgba(255,255,255,0.1); border-radius: 16px; color: #8A95A8; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; }
-    .cl-add-inline { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-    .cl-add-input { width: 100%; height: 44px; background: #1E2530; border: none; border-radius: 12px; padding: 0 14px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; outline: none; }
-    .cl-add-input::placeholder { color: #697586; }
-    .cl-add-actions { display: flex; gap: 8px; }
-    .cl-add-cancel, .cl-add-confirm { flex: 1; height: 40px; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
-    .cl-add-cancel { background: #161B24; color: #8A95A8; }
-    .cl-add-confirm { background: #C99A0A; color: #0C0F14; }
-    .cl-add-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
-    .add-spinner { display: flex; align-items: center; justify-content: center; }
-    .spinner-miru { width: 18px; height: 18px; animation: spin 800ms linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Tasks */
+    .tasks-empty { text-align: center; padding: 24px 0; }
+    .tasks-empty p { font-size: 13px; color: #8A95A8; margin: 0; }
+    .tasks-list { display: flex; flex-direction: column; margin-top: 12px; }
+    .task-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #161B24; border-radius: 16px; margin-bottom: 8px; cursor: pointer; transition: opacity 150ms; }
+    .task-item:active { opacity: 0.8; }
+    .task-priority { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+    .task-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .task-title { font-size: 14px; font-weight: 500; color: #F0F2F5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .task-meta { font-size: 12px; color: #697586; }
+    .task-arrow { flex-shrink: 0; }
 
     /* FAB */
     .fab-container { position: fixed; bottom: 80px; right: 20px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 8px; z-index: 90; }
@@ -724,6 +593,8 @@ export class DashboardComponent {
     debts: { active: 0, total: 0, paidPercent: 0 },
     cardItems: [],
     cardItemsTotal: 0,
+    pendingTasks: [],
+    pendingTasksCount: 0,
   }
   unreadCount = 0
   fabOpen = false
@@ -753,17 +624,10 @@ export class DashboardComponent {
     return CATEGORY_ICONS[category] || '📦'
   }
 
-  // Checklist
-  clState: 'loading' | 'loaded' | 'error' = 'loading'
-  clItems: IChecklistItem[] = []
-  clSummary: IChecklistSummary = { total: 0, completed: 0, percentage: 0, month: '', streak: 0 }
-  clToggling = false
-  clAdding = false
-  showAddTask = false
-  newTaskName = ''
-
-  showConfetti = false
-  confettiPieces: Array<{ x: number; d: string; c: string }> = []
+  getPriorityColor(priority: string): string {
+    const colors: Record<string, string> = { high: '#E05252', medium: '#C99A0A', low: '#15C48C' }
+    return colors[priority] || '#8A95A8'
+  }
 
   constructor(
     private router: Router,
@@ -775,29 +639,12 @@ export class DashboardComponent {
   ngOnInit(): void {
     this.loadDashboard()
     this.loadUnreadCount()
-    this.loadChecklist()
     setTimeout(() => {
       if (this.state === 'loading') {
         this.state = 'error'
         this.cdr.markForCheck()
       }
     }, 10000)
-  }
-  get monthName(): string {
-    if (!this.clSummary.month) return ''
-    const [y, m] = this.clSummary.month.split('-')
-    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-    return `${months[parseInt(m, 10) - 1]} ${y}`
-  }
-
-  get visibleItems(): IChecklistItem[] {
-    const pending = this.clItems.filter(i => !i.isCompleted)
-    const done = this.clItems.filter(i => i.isCompleted)
-    return [...pending, ...done]
-  }
-
-  itemTrackBy(_index: number, item: IChecklistItem): string {
-    return item._id
   }
 
   cardItemTrackBy(_index: number, item: DashboardCardItem): string {
@@ -833,105 +680,6 @@ export class DashboardComponent {
           this.cdr.markForCheck()
         },
       })
-  }
-
-  loadChecklist(): void {
-    this.clState = 'loading'
-    this.cdr.markForCheck()
-    this.api.get<IChecklistResponse>('/checklist')
-      .subscribe({
-        next: (res) => {
-          const cl = res?.data
-          if (cl) {
-            this.clItems = cl.items ?? []
-            this.clSummary = cl.summary ?? { total: 0, completed: 0, percentage: 0, month: '', streak: 0 }
-            if (this.clSummary.percentage === 100 && this.clSummary.total > 0) {
-              this.triggerConfetti()
-            }
-          }
-          this.clState = 'loaded'
-          this.cdr.markForCheck()
-        },
-        error: () => {
-          this.clState = 'error'
-          this.cdr.markForCheck()
-        },
-      })
-  }
-
-  toggleItem(item: IChecklistItem): void {
-    if (this.clToggling || !this.clSummary.month) return
-    this.clToggling = true
-    this.api.patch<IChecklistResponse>(`/checklist/${this.clSummary.month}/items/${item._id}`, {})
-      .subscribe({
-        next: (res) => {
-          const cl = res?.data
-          if (cl) {
-            this.clItems = cl.items ?? []
-            this.clSummary = cl.summary ?? this.clSummary
-            if (this.clSummary.percentage === 100 && this.clSummary.total > 0) {
-              this.triggerConfetti()
-            } else {
-              this.showConfetti = false
-            }
-          }
-          this.clToggling = false
-        },
-        error: () => {
-          this.clToggling = false
-        },
-      })
-  }
-
-  addCustomTask(): void {
-    const name = this.newTaskName.trim()
-    if (!name || this.clAdding || !this.clSummary.month) return
-    this.clAdding = true
-    this.api.post<IChecklistResponse>(`/checklist/${this.clSummary.month}/items`, { name })
-      .subscribe({
-        next: (res) => {
-          const cl = res?.data
-          if (cl) {
-            this.clItems = cl.items ?? []
-            this.clSummary = cl.summary ?? this.clSummary
-          }
-          this.clAdding = false
-          this.showAddTask = false
-          this.newTaskName = ''
-        },
-        error: () => {
-          this.clAdding = false
-        },
-      })
-  }
-
-  cancelAddTask(): void {
-    this.showAddTask = false
-    this.newTaskName = ''
-  }
-
-  deleteItem(id: string): void {
-    if (!this.clSummary.month) return
-    this.api.delete<IChecklistResponse>(`/checklist/${this.clSummary.month}/items/${id}`)
-      .subscribe({
-        next: (res) => {
-          const cl = res?.data
-          if (cl) {
-            this.clItems = cl.items ?? []
-            this.clSummary = cl.summary ?? this.clSummary
-          }
-        },
-        error: () => {},
-      })
-  }
-
-  private triggerConfetti(): void {
-    this.showConfetti = true
-    this.confettiPieces = Array.from({ length: 20 }, () => ({
-      x: Math.random() * 100,
-      d: `${Math.random() * 0.5}s`,
-      c: ['#15C48C','#C99A0A','#5B8DEF','#E05252','#E4B3E9','#9B6EF3'][Math.floor(Math.random() * 6)],
-    }))
   }
 
   get expenseRatio(): number {

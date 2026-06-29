@@ -55,24 +55,12 @@ function toChecklistResponse(doc: IChecklistDocument, streak?: number): ICheckli
 
 export async function getOrCreate(familyId: string, month?: string): Promise<IChecklistResponse> {
   const targetMonth = month || new Date().toISOString().slice(0, 7)
-  let doc = await ChecklistModel.findOne({ familyId, month: targetMonth })
+  const doc = await ChecklistModel.findOne({ familyId, month: targetMonth })
   if (!doc) {
-    doc = await ChecklistModel.create({
-      familyId,
-      month: targetMonth,
-      items: DEFAULT_ITEMS.map((item) => ({
-        label: item.label,
-        amount: item.amount,
-        dueDay: item.dueDay,
-        category: item.category,
-        isRecurring: true,
-        isCustom: false,
-        assignedTo: null,
-        completed: false,
-        completedBy: null,
-        completedAt: null,
-      })),
-    })
+    return {
+      items: [],
+      summary: { total: 0, completed: 0, percentage: 0, month: targetMonth, streak: 0 },
+    }
   }
   const streak = await computeStreak(familyId, targetMonth)
   return toChecklistResponse(doc, streak)

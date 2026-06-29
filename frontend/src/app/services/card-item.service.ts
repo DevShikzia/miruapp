@@ -12,6 +12,10 @@ export class CardItemService {
     return this.api.get<CardItem[]>(`/card-items/card/${cardId}`).pipe(map(res => res.data))
   }
 
+  getById(id: string): Observable<CardItem> {
+    return this.api.get<CardItem>(`/card-items/${id}`).pipe(map(res => res.data))
+  }
+
   create(data: CreateCardItemRequest): Observable<CardItem> {
     return this.api.post<CardItem>('/card-items', data).pipe(map(res => res.data))
   }

@@ -522,41 +522,43 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
   openItemForm(item?: CardStatementItem): void {
     const now = new Date()
     const pad = (n: number) => n.toString().padStart(2, '0')
-    const isoLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+    const nowLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+
+    const prepareForm = (startPeriodIso: string) => ({
+      cardId: this.cardId,
+      description: item?.description ?? '',
+      category: item?.category ?? 'entertainment',
+      type: (item?.itemType ?? 'recurring') as 'installment' | 'recurring',
+      currency: item?.currency ?? 'ARS',
+      amount: item?.amount ?? 0,
+      amountUsd: undefined,
+      totalAmount: item?.totalAmount ?? item?.amount ?? 0,
+      totalInstallments: item?.totalInstallments ?? 1,
+      installmentManual: item?.installmentManual ?? false,
+      startPeriod: startPeriodIso,
+    })
 
     if (item) {
       this.editingItemId = item._id
-      this.itemForm = {
-        cardId: this.cardId,
-        description: item.description,
-        category: item.category,
-        type: item.itemType as 'installment' | 'recurring',
-        currency: item.currency ?? 'ARS',
-        amount: item.amount,
-        amountUsd: undefined,
-        totalAmount: item.totalAmount ?? item.amount,
-        totalInstallments: item.totalInstallments ?? 1,
-        installmentManual: item.installmentManual ?? false,
-        startPeriod: isoLocal,
-      }
-      this.installmentInputMode = item.installmentManual ? 'cuota' : 'total'
+      this.cardItemService.getById(item._id).pipe(takeUntil(this.destroy$)).subscribe({
+        next: (cardItem) => {
+          const startPeriodLocal = cardItem.startPeriod ? this.isoToLocal(cardItem.startPeriod) : nowLocal
+          this.itemForm = prepareForm(startPeriodLocal)
+          this.installmentInputMode = cardItem.installmentManual ? 'cuota' : 'total'
+          this.showItemForm = true
+        },
+        error: () => {
+          this.itemForm = prepareForm(nowLocal)
+          this.installmentInputMode = 'total'
+          this.showItemForm = true
+        },
+      })
     } else {
       this.editingItemId = null
-      this.itemForm = {
-        cardId: this.cardId,
-        description: '',
-        category: 'entertainment',
-        type: 'recurring',
-        currency: 'ARS',
-        amount: 0,
-        totalAmount: 0,
-        totalInstallments: 1,
-        installmentManual: false,
-        startPeriod: isoLocal,
-      }
+      this.itemForm = prepareForm(nowLocal)
       this.installmentInputMode = 'total'
+      this.showItemForm = true
     }
-    this.showItemForm = true
   }
 
   closeItemForm(): void {
@@ -683,6 +685,16 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
     }
   }
 
+  private isoToLocal(iso: string): string {
+    const d = new Date(iso)
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  private localToIso(local: string): string {
+    return `${local}:00.000Z`
+  }
+
   saveItem(): void {
     if (!this.canSaveItem) return
 
@@ -694,6 +706,7 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
       ...this.itemForm,
       amount,
       rateUsed: this.itemForm.currency === 'USD' ? this.currentRate : undefined,
+      startPeriod: this.localToIso(this.itemForm.startPeriod),
     }
 
     if (this.editingItemId) {

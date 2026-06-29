@@ -51,7 +51,11 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
                 <span class="card-digits" *ngIf="card.bankName || card.lastFourDigits">{{ card.bankName }}{{ card.bankName && card.lastFourDigits ? ' •••• ' : '' }}{{ card.lastFourDigits ? '•••• ' + card.lastFourDigits : '' }}</span>
               </div>
             </div>
-            <div class="card-arrow">
+            <div class="card-right">
+              <div class="card-balance" *ngIf="card.creditLimit">
+                <span class="balance-gastado">$ {{ getStatementTotal(card._id) | number:'1.0-0':'es-AR' }}</span>
+                <span class="balance-disponible">/ $ {{ getDisponible(card) | number:'1.0-0':'es-AR' }}</span>
+              </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </div>
           </button>
@@ -108,6 +112,10 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
     .card-name { font-size: 14px; font-weight: 600; color: #F0F2F5; }
     .card-digits { font-size: 11px; font-weight: 400; color: #697586; }
     .card-arrow { display: flex; align-items: center; }
+    .card-right { display: flex; align-items: center; gap: 12px; }
+    .card-balance { display: flex; align-items: baseline; gap: 2px; text-align: right; }
+    .balance-gastado { font-size: 14px; font-weight: 600; color: #F0F2F5; }
+    .balance-disponible { font-size: 11px; font-weight: 400; color: #697586; }
 
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; margin-top: 80px; }
     .empty-text { font-size: 14px; font-weight: 400; color: #697586; text-align: center; }
@@ -231,5 +239,14 @@ export class ListaTarjetasComponent implements OnInit, OnDestroy {
 
   createCard(): void {
     this.router.navigate(['/tarjetas/nueva'])
+  }
+
+  getStatementTotal(cardId: string): number {
+    return this.statements.get(cardId)?.totalAmount ?? 0
+  }
+
+  getDisponible(card: CreditCardData): number {
+    const spent = this.getStatementTotal(card._id)
+    return (card.creditLimit || 0) - spent
   }
 }

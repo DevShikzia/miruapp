@@ -5,6 +5,14 @@ import { ApiService } from './api.service'
 import type { CreditCardData, CreateCreditCardRequest, UpdateCreditCardRequest, CardStatement } from '@shared/types/credit-card.types'
 import type { ApiSuccessResponse } from '@shared/types/response.types'
 
+export interface PayStatementRequest {
+  amount: number
+  paymentMethod: 'debit' | 'cash' | 'transfer' | 'credit_card'
+  sourceCardId?: string
+  commission?: number
+  description?: string
+}
+
 @Injectable({ providedIn: 'root' })
 export class TarjetasService {
   private apiUrl = '/credit-cards'
@@ -35,5 +43,9 @@ export class TarjetasService {
     const params: Record<string, string> = {}
     if (month) params['month'] = month
     return this.api.get<CardStatement>(`${this.apiUrl}/${id}/statement`, params).pipe(map(res => res.data))
+  }
+
+  payStatement(cardId: string, data: PayStatementRequest): Observable<void> {
+    return this.api.post<void>(`${this.apiUrl}/${cardId}/pay-statement`, data).pipe(map(res => undefined))
   }
 }

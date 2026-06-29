@@ -16,3 +16,11 @@ export const createCreditCardSchema = z.object({
 })
 
 export const updateCreditCardSchema = createCreditCardSchema.partial()
+
+export const payStatementSchema = z.object({
+  amount: z.number().positive('El monto debe ser positivo'),
+  paymentMethod: z.enum(['debit', 'cash', 'transfer', 'credit_card']),
+  sourceCardId: z.string().optional(),
+  commission: z.number().nonnegative().optional(),
+  description: z.string().max(200).optional(),
+})

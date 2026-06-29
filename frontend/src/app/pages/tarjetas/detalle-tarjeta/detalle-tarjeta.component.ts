@@ -84,6 +84,7 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
             Sin gastos en este ciclo
           </div>
           <div class="payment-due">Vence el {{ statement.dueDate }}</div>
+          <button class="btn-pay" *ngIf="statement.totalAmount > 0" (click)="openPayModal()">Pagar resumen</button>
         </div>
 
         <div class="statement-section" *ngIf="statement">
@@ -267,6 +268,54 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
             </button>
           </div>
         </div>
+
+        <div class="modal-overlay" *ngIf="showPayModal" (click)="closePayModal()">
+          <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <span class="modal-title">Pagar resumen</span>
+              <button class="modal-close" (click)="closePayModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Total a pagar</label>
+              <input class="form-input" type="number" [(ngModel)]="payForm.amount" name="payAmount" />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">M\u00e9todo de pago</label>
+              <select class="form-input" [(ngModel)]="payForm.paymentMethod" name="payMethod">
+                <option value="debit">D\u00e9bito</option>
+                <option value="cash">Efectivo</option>
+                <option value="transfer">Transferencia</option>
+                <option value="credit_card">Otra tarjeta</option>
+              </select>
+            </div>
+
+            <div class="form-field" *ngIf="payForm.paymentMethod === 'credit_card'">
+              <label class="form-label">Tarjeta origen</label>
+              <select class="form-input" [(ngModel)]="payForm.sourceCardId" name="sourceCard">
+                <option value="">Seleccionar tarjeta...</option>
+                <option *ngFor="let c of otherCards" [value]="c._id">{{ c.name }}</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Comisi\u00f3n (opcional)</label>
+              <input class="form-input" type="number" [(ngModel)]="payForm.commission" name="commission" placeholder="Monto adicional" />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Descripci\u00f3n (opcional)</label>
+              <input class="form-input" [(ngModel)]="payForm.description" name="payDesc" placeholder="Ej: PagoVisa" />
+            </div>
+
+            <button class="btn-save-item" [disabled]="!canConfirmPay" (click)="confirmPay()">
+              Confirmar pago
+            </button>
+          </div>
+        </div>
       </ng-container>
 
       <p class="error-msg" *ngIf="state === 'error'">
@@ -316,6 +365,8 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
     .payment-amount { font-size: 22px; font-weight: 700; color: #F0F2F5; }
     .payment-amount.empty { font-size: 14px; font-weight: 400; color: #697586; }
     .payment-due { font-size: 12px; font-weight: 400; color: #8A95A8; margin-top: 4px; }
+    .btn-pay { width: 100%; height: 40px; background: #22C55E; border: none; border-radius: 999px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: opacity 150ms; }
+    .btn-pay:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .statement-section { margin-top: 20px; }
     .statement-header { display: flex; justify-content: space-between; align-items: center; }
@@ -393,9 +444,11 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
 export class DetalleTarjetaComponent implements OnInit, OnDestroy {
   cardId = ''
   card: CreditCardData | null = null
+  cards: CreditCardData[] = []
   statement: CardStatement | null = null
   state: 'loading' | 'loaded' | 'error' = 'loading'
   showItemForm = false
+  showPayModal = false
   editingItemId: string | null = null
   currentRate = 1600
   installmentInputMode: 'total' | 'cuota' = 'total'
@@ -411,6 +464,17 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
     totalInstallments: 1,
     installmentManual: false,
     startPeriod: '',
+  }
+
+  payForm: {
+    amount: number
+    paymentMethod: 'debit' | 'cash' | 'transfer' | 'credit_card'
+    sourceCardId?: string
+    commission?: number
+    description?: string
+  } = {
+    amount: 0,
+    paymentMethod: 'debit',
   }
 
   private destroy$ = new Subject<void>()
@@ -473,6 +537,49 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
     return total > 0 && Math.abs(this.realTotal - total) > 1
   }
 
+  get otherCards(): CreditCardData[] {
+    return this.cards.filter(c => c._id !== this.cardId && c.isActive)
+  }
+
+  get canConfirmPay(): boolean {
+    if (this.payForm.amount <= 0) return false
+    if (this.payForm.paymentMethod === 'credit_card' && !this.payForm.sourceCardId) return false
+    return true
+  }
+
+  openPayModal(): void {
+    this.payForm = {
+      amount: this.statement?.totalAmount ?? 0,
+      paymentMethod: 'debit',
+      sourceCardId: '',
+      commission: undefined,
+      description: '',
+    }
+    this.showPayModal = true
+  }
+
+  closePayModal(): void {
+    this.showPayModal = false
+  }
+
+  confirmPay(): void {
+    if (!this.canConfirmPay || !this.card) return
+    const payload: any = { ...this.payForm }
+    if (!payload.commission) delete payload.commission
+    if (!payload.description) delete payload.description
+    if (payload.paymentMethod !== 'credit_card') delete payload.sourceCardId
+
+    this.tarjetasService.payStatement(this.cardId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.closePayModal()
+          this.loadStatement()
+        },
+        error: () => {},
+      })
+  }
+
   loadData(): void {
     this.state = 'loading'
     this.tarjetasService.getById(this.cardId)
@@ -483,11 +590,23 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
           this.cdr.markForCheck()
           this.loadRate()
           this.loadStatement()
+          this.loadAllCards()
         },
         error: () => {
           this.state = 'error'
           this.cdr.markForCheck()
         },
+      })
+  }
+
+  private loadAllCards(): void {
+    this.tarjetasService.getAll()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (cards) => {
+          this.cards = cards ?? []
+        },
+        error: () => {},
       })
   }
 

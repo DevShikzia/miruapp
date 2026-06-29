@@ -57,14 +57,15 @@ export async function remove(id: string, familyId: string): Promise<void> {
 }
 
 function currentPeriod(card: ICreditCardDocument, refYear: number, refMonth: number): { periodStartStr: string; periodEndStr: string; dueDateStr: string } {
+  const pad = (n: number) => String(n).padStart(2, '0')
+
   const periodStart = new Date(refYear, refMonth, card.closingDay + 1)
   const periodEnd = new Date(refYear, refMonth + 1, card.closingDay)
-
-  const periodStartStr = periodStart.toISOString().slice(0, 10)
-  const periodEndStr = periodEnd.toISOString().slice(0, 10)
-
   const dueDate = new Date(refYear, refMonth + 1, card.dueDay)
-  const dueDateStr = dueDate.toISOString().slice(0, 10)
+
+  const periodStartStr = `${periodStart.getFullYear()}-${pad(periodStart.getMonth() + 1)}-${pad(periodStart.getDate())}`
+  const periodEndStr = `${periodEnd.getFullYear()}-${pad(periodEnd.getMonth() + 1)}-${pad(periodEnd.getDate())}`
+  const dueDateStr = `${dueDate.getFullYear()}-${pad(dueDate.getMonth() + 1)}-${pad(dueDate.getDate())}`
 
   return { periodStartStr, periodEndStr, dueDateStr }
 }
@@ -78,11 +79,20 @@ export async function getStatement(cardId: string, familyId: string, month?: str
   if (!card) throw new NotFoundError('Tarjeta no encontrada')
 
   const now = new Date()
+  const isCurrentPeriod = !month ||
+    (parseInt(month.split('-')[0], 10) === now.getFullYear() &&
+     parseInt(month.split('-')[1], 10) === now.getMonth() + 1)
+
   const year = month ? parseInt(month.split('-')[0], 10) : now.getFullYear()
   const refMonth = month ? parseInt(month.split('-')[1], 10) - 1 : now.getMonth()
 
   const { periodStartStr, periodEndStr, dueDateStr } = currentPeriod(card, year, refMonth)
   const currentPeriodYYYYMM = periodToYYYYMM(year, refMonth + 1)
+
+  const cardItemQuery: Record<string, unknown> = { cardId, familyId }
+  if (isCurrentPeriod) {
+    cardItemQuery.isActive = true
+  }
 
   const [expenses, cardItems, currentRate] = await Promise.all([
     ExpenseModel.find({
@@ -90,7 +100,7 @@ export async function getStatement(cardId: string, familyId: string, month?: str
       creditCardId: cardId,
       date: { $gte: periodStartStr, $lte: periodEndStr },
     }).sort({ date: -1 }),
-    CardItemModel.find({ cardId, familyId, isActive: true }),
+    CardItemModel.find(cardItemQuery),
     getTarjetaRate().catch(() => 1600),
   ])
 
@@ -174,5 +184,75 @@ export async function getStatement(cardId: string, familyId: string, month?: str
     itemsTotal,
     expenses: expenseItems,
     items,
+  }
+}
+
+export interface PayStatementData {
+  amount: number
+  paymentMethod: 'debit' | 'cash' | 'transfer' | 'credit_card'
+  sourceCardId?: string
+  commission?: number
+  description?: string
+}
+
+export async function payStatement(
+  cardId: string,
+  familyId: string,
+  userId: string,
+  data: PayStatementData
+): Promise<void> {
+  const card = await CreditCardModel.findOne({ _id: cardId, familyId })
+  if (!card) throw new NotFoundError('Tarjeta no encontrada')
+
+  const now = new Date()
+  const { periodEndStr } = currentPeriod(card, now.getFullYear(), now.getMonth())
+
+  await CardItemModel.updateMany(
+    {
+      cardId,
+      familyId,
+      isActive: true,
+    },
+    { $set: { isActive: false } }
+  )
+
+  const totalAmount = data.amount + (data.commission ?? 0)
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+  if (data.paymentMethod === 'credit_card') {
+    if (!data.sourceCardId) throw new NotFoundError('Tarjeta origen requerida')
+    const sourceCard = await CreditCardModel.findOne({ _id: data.sourceCardId, familyId })
+    if (!sourceCard) throw new NotFoundError('Tarjeta origen no encontrada')
+
+    await CardItemModel.create({
+      cardId: data.sourceCardId,
+      familyId,
+      createdBy: userId,
+      description: data.description ?? `Pago de resumen ${card.name}`,
+      category: 'other',
+      type: 'recurring',
+      currency: 'ARS',
+      amount: totalAmount,
+      isActive: false,
+      startPeriod: new Date(),
+    })
+  } else {
+    const paymentTypeMap: Record<string, 'cash' | 'debit_card' | 'transfer'> = {
+      debit: 'debit_card',
+      cash: 'cash',
+      transfer: 'transfer',
+    }
+
+    await ExpenseModel.create({
+      familyId,
+      createdBy: userId,
+      description: data.description ?? `Pago de resumen ${card.name}`,
+      amount: totalAmount,
+      category: 'other',
+      date: dateStr,
+      paymentType: paymentTypeMap[data.paymentMethod],
+      currency: 'ARS',
+      isEssential: false,
+    })
   }
 }

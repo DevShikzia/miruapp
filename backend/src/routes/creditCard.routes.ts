@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authMiddleware } from '../middlewares/auth.middleware'
 import { requireFamilyRole } from '../middlewares/role.middleware'
 import { validate } from '../middlewares/validate.middleware'
-import { createCreditCardSchema, updateCreditCardSchema } from '../schemas/credit-card.schema'
+import { createCreditCardSchema, updateCreditCardSchema, payStatementSchema } from '../schemas/credit-card.schema'
 import * as creditCardController from '../controllers/creditCard.controller'
 
 const router = Router()
@@ -15,5 +15,6 @@ router.get('/:id', requireFamilyRole('family_admin', 'member', 'readonly'), cred
 router.put('/:id', requireFamilyRole('family_admin', 'member'), validate(updateCreditCardSchema), creditCardController.update)
 router.delete('/:id', requireFamilyRole('family_admin', 'member'), creditCardController.remove)
 router.get('/:id/statement', requireFamilyRole('family_admin', 'member', 'readonly'), creditCardController.getStatement)
+router.post('/:id/pay-statement', requireFamilyRole('family_admin', 'member'), validate(payStatementSchema), creditCardController.payStatement)
 
 export default router

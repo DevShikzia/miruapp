@@ -70,3 +70,14 @@ export async function getStatement(req: AuthRequest, res: Response, next: NextFu
     next(error)
   }
 }
+
+export async function payStatement(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const familyId = requireFamily(req.user)
+    const userId = req.user!._id
+    await creditCardService.payStatement(req.params.id, familyId, userId, req.body)
+    sendSuccess(res, null, 'Resumen pagado correctamente')
+  } catch (error) {
+    next(error)
+  }
+}

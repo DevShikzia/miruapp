@@ -63,8 +63,8 @@ export async function remove(id: string, familyId: string): Promise<void> {
 export function getCurrentInstallment(startPeriod: Date | string, currentPeriod: string, totalInstallments: number): number | null {
   const startDate = typeof startPeriod === 'string' ? new Date(startPeriod) : startPeriod
   const [currY, currM] = currentPeriod.split('-').map(Number)
-  const startY = startDate.getUTCFullYear()
-  const startM = startDate.getUTCMonth() + 1
+  const startY = startDate.getFullYear()
+  const startM = startDate.getMonth() + 1
   const monthsPassed = (currY - startY) * 12 + (currM - startM)
   const current = monthsPassed + 1
   if (current < 1 || current > totalInstallments) return null

@@ -1,8 +1,8 @@
-import { Component, ChangeDetectorRef } from '@angular/core'
+import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core'
 import { Router } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { NgIf, NgFor, DecimalPipe } from '@angular/common'
-import { Subject, takeUntil } from 'rxjs'
+import { Subject } from 'rxjs'
 import { ApiService } from '../../services/api.service'
 import { TarjetasService } from '../../services/tarjetas.service'
 import { GoalEmojiPipe } from '../../pipes/goal-emoji.pipe'
@@ -188,6 +188,27 @@ import type { CreditCardData } from '@shared/types/credit-card.types'
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#15C48C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
         </div>
       </div>
+
+      <!-- FAB Speed Dial -->
+      <div class="fab-container">
+        <div class="fab-menu" *ngIf="fabOpen">
+          <button class="fab-option expense" (click)="onFabAction('expense')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/><line x1="12" x2="12" y1="5" y2="19"/></svg>
+            Agregar gasto
+          </button>
+          <button class="fab-option income" (click)="onFabAction('income')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            Agregar ingreso
+          </button>
+          <button class="fab-option task" (click)="onFabAction('task')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Nueva tarea
+          </button>
+        </div>
+        <button class="fab-main" (click)="fabOpen = !fabOpen" [class.open]="fabOpen">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        </button>
+      </div>
     </div>
   `,
   styles: [`
@@ -301,12 +322,24 @@ import type { CreditCardData } from '@shared/types/credit-card.types'
     .success-check { animation: scaleIn 200ms ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .fab-container { position: fixed; bottom: 80px; right: 20px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 8px; z-index: 90; }
+    .fab-menu { display: flex; flex-direction: column-reverse; gap: 8px; }
+    .fab-option { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #161B24; border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; animation: fabIn 200ms ease-out backwards; }
+    @keyframes fabIn { from { opacity: 0; transform: scale(0.8) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .fab-option.income { color: #15C48C; animation-delay: 0.05s; }
+    .fab-option.expense { color: #E05252; animation-delay: 0.1s; }
+    .fab-option.task { color: #E4B3E9; animation-delay: 0.15s; }
+    .fab-main { width: 52px; height: 52px; background: #C99A0A; border: none; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(201,154,10,0.3); transition: transform 200ms, box-shadow 200ms; }
+    .fab-main:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(201,154,10,0.4); }
+    .fab-main.open { transform: rotate(45deg); }
+    .fab-main svg { stroke: #0C0F14; }
   `]
 })
-export class SavingsComponent {
+export class SavingsComponent implements OnInit, OnDestroy {
   state: 'loading' | 'loaded' | 'error' | 'success' = 'loading'
   savings: SavingData[] = []
-  private destroy$ = new Subject<void>()
+  private subscription: any
 
   PAYMENT_TYPES = [
     { key: 'cash' as PaymentType, label: 'Efectivo' },
@@ -330,14 +363,56 @@ export class SavingsComponent {
   pullDistance = 0
   private pullStartY = 0
   private pulling = false
+  fabOpen = false
+
+  onFabAction(type: 'income' | 'expense' | 'task'): void {
+    this.fabOpen = false
+    if (type === 'income') {
+      this.router.navigate(['/ingresos/nuevo'])
+    } else if (type === 'expense') {
+      this.router.navigate(['/gastos/nuevo'])
+    } else if (type === 'task') {
+      this.router.navigate(['/tareas'])
+    }
+  }
 
   constructor(
     private api: ApiService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private tarjetasService: TarjetasService,
-  ) {
+  ) {}
+
+  ngOnInit(): void {
     this.loadSavings()
+  }
+
+  loadSavings(): void {
+    this.state = 'loading'
+    this.subscription = this.api.getPaginated<SavingData>('/savings').subscribe({
+      next: (res) => {
+        this.savings = res?.data ?? []
+        this.state = 'loaded'
+        this.cdr.markForCheck()
+      },
+      error: () => {
+        this.state = 'error'
+        this.cdr.markForCheck()
+      },
+    })
+
+    setTimeout(() => {
+      if (this.state === 'loading') {
+        this.state = 'error'
+        this.cdr.markForCheck()
+      }
+    }, 10000)
+  }
+
+  ngOnDestroy(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe()
+    }
   }
 
   get totalSaved(): number {
@@ -358,23 +433,6 @@ export class SavingsComponent {
     const active = this.savings.filter(g => g.progress < 100 && g.progress > 0)
     if (active.length === 0) return null
     return active.reduce((best, g) => g.progress > best.progress ? g : best)
-  }
-
-  loadSavings(): void {
-    this.state = 'loading'
-    this.api.getPaginated<SavingData>('/savings')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          this.savings = res?.data ?? []
-          this.state = 'loaded'
-          this.cdr.detectChanges()
-        },
-        error: () => {
-          this.state = 'error'
-          this.cdr.detectChanges()
-        },
-      })
   }
 
   goBack(): void {
@@ -406,7 +464,7 @@ export class SavingsComponent {
     this.contributeError = ''
     this.paymentType = 'cash'
     this.creditCardId = ''
-    this.tarjetasService.getAll().pipe(takeUntil(this.destroy$)).subscribe({
+    this.tarjetasService.getAll().subscribe({
       next: (cards) => { this.creditCards = cards ?? [] },
     })
     this.showContributeModal = true
@@ -448,8 +506,9 @@ export class SavingsComponent {
       creditCardId: this.paymentType === 'credit_card' ? this.creditCardId : undefined,
     }
 
-    this.api.post<AddContributionRequest>('/savings/' + this.contributeGoal._id + '/contributions', payload)
-      .pipe(takeUntil(this.destroy$))
+    const goalId = this.contributeGoal?._id
+    if (!goalId) return
+    this.api.post<AddContributionRequest>('/savings/' + goalId + '/contributions', payload)
       .subscribe({
         next: () => {
           this.contributeSaving = false
@@ -464,7 +523,6 @@ export class SavingsComponent {
         error: () => {
           this.contributeSaving = false
           this.contributeError = 'No pudimos registrar el aporte'
-          this.cdr.detectChanges()
         },
       })
   }

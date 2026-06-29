@@ -74,6 +74,7 @@ export async function addContribution(id: string, data: AddContributionRequest, 
   if (!doc) throw new NotFoundError('Ahorro no encontrado')
 
   doc.contributions.push({ amount: data.amount, date: data.date })
+  doc.currentAmount = doc.contributions.reduce((s, c) => s + c.amount, 0)
   await doc.save()
 
   if (data.paymentType) {
@@ -99,6 +100,7 @@ export async function removeContribution(id: string, contributionIndex: number, 
   if (!doc.contributions[contributionIndex]) throw new NotFoundError('Contribución no encontrada')
 
   doc.contributions.splice(contributionIndex, 1)
+  doc.currentAmount = doc.contributions.reduce((s, c) => s + c.amount, 0)
   await doc.save()
 
   return toSavingData(doc)

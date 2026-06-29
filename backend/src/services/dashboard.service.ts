@@ -118,9 +118,13 @@ export async function getDashboard(familyId: string): Promise<DashboardData> {
   const totalPaid = debts.reduce((s, d) => s + d.payments.reduce((ps, p) => ps + p.amount, 0), 0)
   const paidPercent = totalDebtAmount > 0 ? Math.round((totalPaid / totalDebtAmount) * 100) : 0
 
-  const sortedSavings = savings.sort((a, b) => a.deadline.localeCompare(b.deadline))
-  const savingGoal = sortedSavings.length > 0
-    ? { name: sortedSavings[0].name, current: sortedSavings[0].currentAmount, target: sortedSavings[0].targetAmount }
+  const sortedByProgress = [...savings].sort((a, b) => {
+    const progressA = a.targetAmount > 0 ? a.currentAmount / a.targetAmount : 0
+    const progressB = b.targetAmount > 0 ? b.currentAmount / b.targetAmount : 0
+    return progressB - progressA
+  })
+  const savingGoal = sortedByProgress.length > 0
+    ? { name: sortedByProgress[0].name, current: sortedByProgress[0].currentAmount, target: sortedByProgress[0].targetAmount }
     : undefined
 
   const cardItemDocs = await CardItemModel.find({ familyId, isActive: true })

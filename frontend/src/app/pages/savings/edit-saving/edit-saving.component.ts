@@ -1,4 +1,4 @@
-import { Component } from '@angular/core'
+import { Component, ChangeDetectorRef } from '@angular/core'
 import { Router, ActivatedRoute } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { NgIf, NgFor } from '@angular/common'
@@ -234,6 +234,7 @@ export class EditSavingComponent {
     private api: ApiService,
     private router: Router,
     private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
   ) {
     this.goalId = this.route.snapshot.paramMap.get('id') || ''
     this.loadGoal()
@@ -263,7 +264,7 @@ export class EditSavingComponent {
       .subscribe({
         next: (res) => {
           const g = res?.data
-          if (!g) { this.state = 'error'; return }
+          if (!g) { this.state = 'error'; this.cdr.detectChanges(); return }
           this.goal = g
           this.name = g.name
           this.originalName = g.name
@@ -276,9 +277,11 @@ export class EditSavingComponent {
           this.originalColor = this.selectedColor
           this.selectedEmoji = g.name
           this.state = 'loaded'
+          this.cdr.detectChanges()
         },
         error: () => {
           this.state = 'error'
+          this.cdr.detectChanges()
         },
       })
   }
@@ -323,11 +326,13 @@ export class EditSavingComponent {
       .subscribe({
         next: () => {
           this.saving = false
+          this.cdr.detectChanges()
           this.router.navigate(['/ahorros'])
         },
         error: () => {
           this.saving = false
           this.saveError = 'No pudimos guardar los cambios'
+          this.cdr.detectChanges()
         },
       })
   }

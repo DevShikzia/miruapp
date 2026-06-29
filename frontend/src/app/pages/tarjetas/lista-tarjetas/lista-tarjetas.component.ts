@@ -13,6 +13,9 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
     <div class="container">
       <header class="header">
         <h1 class="title">Tarjetas</h1>
+        <button class="btn-add" (click)="createCard()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E4B3E9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        </button>
       </header>
 
       <div class="loading-state" *ngIf="state === 'loading'">
@@ -79,6 +82,7 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
 
     .header { display: flex; align-items: center; justify-content: space-between; padding-top: 56px; }
     .title { font-size: 20px; font-weight: 700; color: #F0F2F5; margin: 0; }
+    .btn-add { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; }
 
     .loading-state { padding-top: 24px; }
     .skeleton-resumen { height: 120px; background: #1E2530; border-radius: 16px; animation: shimmer 1.5s infinite; }

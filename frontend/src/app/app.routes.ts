@@ -67,7 +67,8 @@ export const routes: Routes = [
       { path: 'deudas', loadComponent: () => import('./pages/debts/debts.component').then(m => m.DebtsComponent) },
       { path: 'tarjetas', loadComponent: () => import('./pages/tarjetas/lista-tarjetas/lista-tarjetas.component').then(m => m.ListaTarjetasComponent) },
       { path: 'ahorros', loadComponent: () => import('./pages/savings/savings.component').then(m => m.SavingsComponent) },
-      { path: 'familia', loadComponent: () => import('./pages/familia/familia.component').then(m => m.FamiliaComponent) },
+{ path: 'familia', loadComponent: () => import('./pages/familia/familia.component').then(m => m.FamiliaComponent) },
+      { path: 'tareas', loadComponent: () => import('./pages/tareas/tareas.component').then(m => m.TareasComponent) },
     ],
   },
   {

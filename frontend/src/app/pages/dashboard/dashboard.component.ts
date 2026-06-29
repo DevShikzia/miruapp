@@ -1,8 +1,9 @@
-import { Component, ChangeDetectorRef } from '@angular/core'
+import { Component, ChangeDetectorRef, signal } from '@angular/core'
 import { Router, RouterLink } from '@angular/router'
 import { NgIf, NgFor, NgClass, DecimalPipe, DatePipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { ApiService } from '../../services/api.service'
+import { AuthService } from '../../services/auth.service'
 import { CategoryLabelPipe } from '../../pipes/category-label.pipe'
 import type { IChecklistItem, IChecklistSummary, IChecklistResponse } from '@shared/types/checklist.types'
 import type { DashboardCardItem } from '@shared/types/credit-card.types'
@@ -27,6 +28,32 @@ interface DashboardData {
   savingGoal?: { name: string; current: number; target: number }
   cardItems: DashboardCardItem[]
   cardItemsTotal: number
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  food: '🍔',
+  transport: '🚗',
+  utilities: '💡',
+  rent: '🏠',
+  health: '💊',
+  education: '📚',
+  entertainment: '🎬',
+  savings: '🐷',
+  debt: '💳',
+  other: '📦',
+  salary: '💼',
+  freelance: '💻',
+  investment: '📈',
+  sale: '🛒',
+  family: '👨‍👩‍👧',
+  loan: '🤝',
+  refund: '💵',
+  electricity: '⚡',
+  water: '💧',
+  gas: '🔥',
+  internet: '🌐',
+  insurance: '🛡️',
+  subscription: '📱',
 }
 
 @Component({
@@ -57,70 +84,95 @@ interface DashboardData {
     <div class="dashboard" *ngIf="state === 'loaded'">
       <!-- Header -->
       <header class="header">
-        <img src="assets/miru-icon.svg" alt="Miru" class="logo-mobile" />
-        <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo-desktop" />
+        <div class="header-top">
+          <img src="assets/miru-icon.svg" alt="Miru" class="logo-mobile" />
+          <img src="assets/miru-logo-horizontal.svg" alt="Miru" class="logo-desktop" />
+        </div>
+        <div class="header-greeting">
+          <span>{{ greeting }}, {{ userName }}</span>
+          <span class="greeting-date">{{ currentDate }}</span>
+        </div>
         <div class="header-actions">
           <button class="icon-btn" (click)="onNotificationClick()">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             <span class="badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
           </button>
-          <button class="icon-btn" (click)="onProfileClick()">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
-          </button>
+          <div class="user-menu-wrap">
+            <button class="icon-btn" (click)="toggleUserMenu()">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+            </button>
+            <div class="user-menu" *ngIf="showUserMenu">
+              <button class="user-menu-item logout" (click)="logout()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
       <!-- Saldo neto -->
-      <section class="balance-section">
-        <span class="balance-label">Saldo neto del mes</span>
-        <div class="balance-amount">
-          <span class="currency">$</span>
-          <span class="amount">{{ data.balance | number:'1.0-0' }}</span>
+      <section class="hero-card">
+        <div class="balance-section">
+          <span class="balance-label">Saldo neto del mes</span>
+          <div class="balance-amount">
+            <span class="currency">$</span>
+            <span class="amount">{{ data.balance | number:'1.0-0' }}</span>
+          </div>
+          <div class="variation-pill" [class.positive]="data.variationPercent > 0" [class.negative]="data.variationPercent < 0" [class.neutral]="data.variationPercent === 0">
+            <svg *ngIf="data.variationPercent > 0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            <svg *ngIf="data.variationPercent < 0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg *ngIf="data.variationPercent === 0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            <span *ngIf="data.variationPercent > 0">+{{ data.variationPercent }}% vs mes anterior</span>
+            <span *ngIf="data.variationPercent < 0">{{ data.variationPercent }}% vs mes anterior</span>
+            <span *ngIf="data.variationPercent === 0">Sin cambios</span>
+          </div>
         </div>
-        <div class="variation" [class.positive]="data.variationPercent > 0" [class.negative]="data.variationPercent < 0" [class.neutral]="data.variationPercent === 0">
-          <svg *ngIf="data.variationPercent > 0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-          <svg *ngIf="data.variationPercent < 0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
-          <svg *ngIf="data.variationPercent === 0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/></svg>
-          <span *ngIf="data.variationPercent > 0">+{{ data.variationPercent }}% vs mes anterior</span>
-          <span *ngIf="data.variationPercent < 0">{{ data.variationPercent }}% vs mes anterior</span>
-          <span *ngIf="data.variationPercent === 0">Sin cambios</span>
-        </div>
+
+        <!-- Barra de progreso dentro del hero -->
+        <section class="progress-section">
+          <div class="progress-labels">
+            <span>Gastado: $ {{ data.totalExpenses | number:'1.0-0' }}</span>
+            <span>Disponible: $ {{ data.balance | number:'1.0-0' }}</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" [style.width.%]="expenseRatio" [ngClass]="trafficColor"></div>
+            <div class="progress-marker" [style.left.%]="BUDGET_THRESHOLD"></div>
+          </div>
+          <div class="progress-warning" *ngIf="expenseRatio > BUDGET_THRESHOLD">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Ya superaste el {{ BUDGET_THRESHOLD }}% del presupuesto</span>
+          </div>
+        </section>
       </section>
 
       <!-- Resumen ingresos/gastos -->
       <section class="summary-row">
         <div class="summary-card income">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 4 4 4-4"/><path d="M12 8v7"/></svg>
+          <span class="summary-icon income-icon">↓</span>
           <span class="summary-label">Ingresos</span>
           <span class="summary-amount">$ {{ data.totalIncomes | number:'1.0-0' }}</span>
+          <span class="summary-variation positive" *ngIf="data.variationPercent > 0">↑ {{ data.variationPercent }}% vs mes anterior</span>
+          <span class="summary-variation negative" *ngIf="data.variationPercent < 0">↓ {{ data.variationPercent | number:'1.0-0' }}% vs mes anterior</span>
         </div>
         <div class="summary-card expense">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V9"/></svg>
+          <span class="summary-icon expense-icon">↑</span>
           <span class="summary-label">Gastos</span>
           <span class="summary-amount">$ {{ data.totalExpenses | number:'1.0-0' }}</span>
+          <span class="summary-variation negative" *ngIf="data.variationPercent > 0">↑ {{ data.variationPercent }}% vs mes anterior</span>
+          <span class="summary-variation positive" *ngIf="data.variationPercent < 0">↓ {{ data.variationPercent | number:'1.0-0' }}% vs mes anterior</span>
         </div>
       </section>
 
       <!-- Semáforo financiero -->
       <section class="traffic-light" [ngClass]="trafficColor">
-        <div class="tl-left">
-          <span class="tl-dot"></span>
-          <div class="tl-text">
+        <div class="tl-content">
+          <div class="tl-header">
+            <span class="tl-dot"></span>
             <strong>{{ trafficLabel }}</strong>
-            <span class="tl-sub">{{ trafficSub }}</span>
           </div>
-        </div>
-        <span class="tl-amount">{{ trafficAmount }}</span>
-      </section>
-
-      <!-- Barra de progreso -->
-      <section class="progress-section">
-        <div class="progress-track">
-          <div class="progress-fill" [style.width.%]="expenseRatio" [ngClass]="trafficColor"></div>
-        </div>
-        <div class="progress-labels">
-          <span>Gastado: $ {{ data.totalExpenses | number:'1.0-0' }}</span>
-          <span>Disponible: $ {{ data.balance | number:'1.0-0' }}</span>
+          <span class="tl-sub">{{ trafficSub }}</span>
+          <span class="tl-amount-warning" *ngIf="trafficColor === 'yellow' || trafficColor === 'red'">{{ trafficAmount }}</span>
         </div>
       </section>
 
@@ -131,9 +183,9 @@ interface DashboardData {
           <a routerLink="/movimientos" class="section-link">Ver todos</a>
         </div>
         <div class="tx-list">
-          <div class="tx-item" *ngFor="let tx of data.recentTransactions">
+          <div class="tx-item" *ngFor="let tx of data.recentTransactions; let last = last" [class.last]="last">
             <div class="tx-icon" [class.income]="tx.type === 'income'" [class.expense]="tx.type === 'expense'">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+              <span class="tx-category-icon">{{ getCategoryIcon(tx.category) }}</span>
             </div>
             <div class="tx-info">
               <span class="tx-name">{{ tx.name | categoryLabel }}</span>
@@ -164,10 +216,13 @@ interface DashboardData {
             </div>
             <span class="debt-total">$ {{ data.debts.total | number:'1.0-0' }}</span>
           </div>
+          <div class="debt-stats">
+            <span>$ {{ data.debts.total * data.debts.paidPercent / 100 | number:'1.0-0' }} pagados</span>
+            <span>{{ data.debts.paidPercent }}% completado</span>
+          </div>
           <div class="debt-bar">
             <div class="debt-fill" [style.width.%]="data.debts.paidPercent"></div>
           </div>
-          <span class="debt-label">{{ data.debts.paidPercent }}% pagado</span>
         </div>
       </section>
 
@@ -211,13 +266,21 @@ interface DashboardData {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2h0V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h0"/></svg>
             <span class="saving-name">{{ data.savingGoal.name }}</span>
           </div>
-          <div class="saving-bar">
-            <div class="saving-fill" [style.width.%]="savingPercent"></div>
-          </div>
-          <div class="saving-footer">
-            <span>$ {{ data.savingGoal.current | number:'1.0-0' }} / $ {{ data.savingGoal.target | number:'1.0-0' }}</span>
-            <span>{{ savingPercent }}%</span>
-          </div>
+          <ng-container *ngIf="data.savingGoal.current > 0; else emptySaving">
+            <div class="saving-bar">
+              <div class="saving-fill" [style.width.%]="savingPercent > 0 ? (savingPercent < 1 ? 1 : savingPercent) : 0"></div>
+            </div>
+            <div class="saving-footer">
+              <span>$ {{ data.savingGoal.current | number:'1.0-0' }} / $ {{ data.savingGoal.target | number:'1.0-0' }}</span>
+              <span>{{ savingPercent | number:'1.0-1' }}%</span>
+            </div>
+          </ng-container>
+          <ng-template #emptySaving>
+            <div class="saving-bar empty">
+              <div class="saving-empty-bar"></div>
+            </div>
+            <p class="saving-motivation">Cada peso cuenta. ¡Empezá hoy!</p>
+          </ng-template>
         </div>
       </section>
 
@@ -225,6 +288,7 @@ interface DashboardData {
       <section class="section">
         <div class="section-header">
           <h3>Checklist mensual</h3>
+          <a routerLink="/tareas" class="section-link">Ver lista completa →</a>
         </div>
 
         <div class="cl-loading" *ngIf="clState === 'loading'">
@@ -239,8 +303,8 @@ interface DashboardData {
         </div>
 
         <ng-container *ngIf="clState === 'loaded'">
-          <!-- Month summary -->
-          <div class="cl-summary">
+          <!-- Month summary tappable -->
+          <div class="cl-summary" routerLink="/tareas">
             <div class="cl-summary-left">
               <span class="cl-month">{{ monthName }}</span>
               <div class="cl-streak" *ngIf="clSummary.streak > 0">
@@ -248,14 +312,17 @@ interface DashboardData {
                 <span>Llevás {{ clSummary.streak }} mes{{ clSummary.streak > 1 ? 'es' : '' }} seguido{{ clSummary.streak > 1 ? 's' : '' }} completando tu checklist</span>
               </div>
             </div>
-            <div class="cl-circle">
-              <svg width="56" height="56" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="24" fill="none" stroke="#1E2530" stroke-width="4"/>
-                <circle cx="28" cy="28" r="24" fill="none" stroke="#15C48C" stroke-width="4"
-                  stroke-dasharray="150.8" [attr.stroke-dashoffset]="150.8 - (150.8 * clSummary.percentage / 100)"
-                  stroke-linecap="round" transform="rotate(-90 28 28)"/>
-              </svg>
-              <span class="cl-circle-text">{{ clSummary.completed }}/{{ clSummary.total }}</span>
+            <div class="cl-summary-right">
+              <div class="cl-circle">
+                <svg width="56" height="56" viewBox="0 0 56 56">
+                  <circle cx="28" cy="28" r="24" fill="none" stroke="#1E2530" stroke-width="4"/>
+                  <circle cx="28" cy="28" r="24" fill="none" stroke="#15C48C" stroke-width="4"
+                    stroke-dasharray="150.8" [attr.stroke-dashoffset]="150.8 - (150.8 * clSummary.percentage / 100)"
+                    stroke-linecap="round" transform="rotate(-90 28 28)"/>
+                </svg>
+                <span class="cl-circle-text">{{ clSummary.completed }}/{{ clSummary.total }}</span>
+              </div>
+              <svg class="cl-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
 
@@ -272,7 +339,7 @@ interface DashboardData {
           <div class="cl-items">
             <div
               class="cl-item"
-              *ngFor="let item of visibleItems; trackBy: itemTrackBy"
+              *ngFor="let item of visibleItems; trackBy: itemTrackBy; let last = last"
               [class.completed]="item.isCompleted"
             >
               <button class="cl-check" [class.checked]="item.isCompleted" (click)="toggleItem(item)" [disabled]="clToggling">
@@ -328,16 +395,20 @@ interface DashboardData {
         </ng-container>
       </section>
 
-      <!-- FAB -->
+      <!-- FAB Speed Dial -->
       <div class="fab-container">
         <div class="fab-menu" *ngIf="fabOpen">
+          <button class="fab-option expense" (click)="onFabAction('expense')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/><line x1="12" x2="12" y1="5" y2="19"/></svg>
+            Agregar gasto
+          </button>
           <button class="fab-option income" (click)="onFabAction('income')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-            Ingreso
+            Agregar ingreso
           </button>
-          <button class="fab-option expense" (click)="onFabAction('expense')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/></svg>
-            Gasto
+          <button class="fab-option task" (click)="onFabAction('task')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Nueva tarea
           </button>
         </div>
         <button class="fab-main" (click)="fabOpen = !fabOpen" [class.open]="fabOpen">
@@ -367,14 +438,18 @@ interface DashboardData {
     }
 
     /* Header */
-    .header { display: flex; align-items: center; justify-content: space-between; height: 44px; }
+    .header { display: flex; flex-direction: column; gap: 4px; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; height: 44px; }
     .logo-mobile { display: block; width: 28px; height: 28px; }
     .logo-desktop { display: none; }
     @media (min-width: 768px) {
       .logo-mobile { display: none; }
       .logo-desktop { display: block; height: 24px; }
     }
-    .header-actions { display: flex; gap: 16px; }
+    .header-greeting { display: flex; flex-direction: column; gap: 2px; }
+    .header-greeting span { font-family: 'Inter', sans-serif; font-size: 12px; color: #8A95A8; }
+    .greeting-date { font-size: 11px; color: #697586; }
+    .header-actions { display: flex; gap: 16px; position: absolute; top: 16px; right: 20px; }
     .icon-btn {
       background: none; border: none; color: #8A95A8; cursor: pointer;
       padding: 0; display: flex; position: relative;
@@ -383,67 +458,107 @@ interface DashboardData {
       position: absolute; top: -2px; right: -4px;
       width: 8px; height: 8px; background: #E05252; border-radius: 50%;
     }
+    .user-menu-wrap { position: relative; }
+    .user-menu {
+      position: absolute; top: 100%; right: 0; margin-top: 8px;
+      background: #1E2530; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 4px; z-index: 200;
+      min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; background: none; border: none; padding: 10px 14px;
+      color: #F0F2F5; font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500; text-align: left;
+      cursor: pointer; border-radius: 8px;
+    }
+    .user-menu-item:hover { background: rgba(255,255,255,0.05); }
+    .user-menu-item.logout { color: #E05252; }
+    .user-menu-item.logout:hover { background: rgba(224,82,82,0.1); }
+
+    /* Hero Card */
+    .hero-card {
+      background: #161B24; border-radius: 24px; border: 1px solid rgba(228,179,233,0.15);
+      padding: 20px; margin-top: 16px;
+    }
 
     /* Saldo */
-    .balance-section { padding: 20px 0; }
+    .balance-section { }
     .balance-label { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #8A95A8; }
     .balance-amount { display: flex; align-items: baseline; gap: 4px; margin-top: 4px; }
     .currency { font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 600; color: #8A95A8; }
     .amount { font-family: 'Inter', sans-serif; font-size: 36px; font-weight: 800; color: #F0F2F5; }
-    .variation { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; }
-    .variation.positive { color: #15C48C; }
-    .variation.negative { color: #E05252; }
-    .variation.neutral { color: #8A95A8; }
+
+    /* Variation Pill */
+    .variation-pill {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 8px;
+      padding: 3px 10px; border-radius: 99px; font-family: 'Inter', sans-serif;
+      font-size: 11px; font-weight: 600;
+    }
+    .variation-pill.positive { background: rgba(21,196,140,0.12); color: #15C48C; }
+    .variation-pill.negative { background: rgba(224,82,82,0.12); color: #E05252; }
+    .variation-pill.neutral { background: rgba(138,149,168,0.12); color: #8A95A8; }
+
+    /* Progress bar */
+    .progress-section { margin-top: 16px; }
+    .progress-labels { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .progress-labels span { font-family: 'Inter', sans-serif; font-size: 11px; }
+    .progress-labels span:first-child { color: #8A95A8; }
+    .progress-labels span:last-child { color: #697586; }
+    .progress-track { height: 10px; background: #1E2530; border-radius: 99px; overflow: hidden; position: relative; }
+    .progress-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+    .progress-fill.green { background: linear-gradient(90deg, #15C48C, #20D9A0); }
+    .progress-fill.yellow { background: linear-gradient(90deg, #C99A0A, #DBAF1A); }
+    .progress-fill.red { background: linear-gradient(90deg, #E05252, #F06A6A); }
+    .progress-marker {
+      position: absolute; top: -3px; width: 2px; height: 16px;
+      background: #697586; border-radius: 1px;
+      transform: translateX(-50%);
+    }
+    .progress-warning {
+      display: flex; align-items: center; gap: 4px; margin-top: 8px;
+      font-family: 'Inter', sans-serif; font-size: 11px; color: #C99A0A;
+    }
 
     /* Summary cards */
-    .summary-row { display: flex; gap: 12px; }
+    .summary-row { display: flex; gap: 12px; margin-top: 16px; }
     .summary-card {
       flex: 1; background: #161B24; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06);
       padding: 16px; display: flex; flex-direction: column; gap: 4px;
     }
-    .summary-card svg { margin-bottom: 4px; }
-    .summary-card.income svg { color: #15C48C; }
-    .summary-card.expense svg { color: #E05252; }
+    .summary-icon { font-size: 20px; margin-bottom: 4px; font-weight: 700; }
+    .income-icon { color: #15C48C; }
+    .expense-icon { color: #E05252; }
     .summary-label { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #8A95A8; }
     .summary-amount { font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 700; }
     .summary-card.income .summary-amount { color: #15C48C; }
     .summary-card.expense .summary-amount { color: #E05252; }
+    .summary-variation { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; margin-top: 2px; }
+    .summary-variation.positive { color: #15C48C; }
+    .summary-variation.negative { color: #E05252; }
 
     /* Traffic light */
     .traffic-light {
-      margin-top: 16px; display: flex; align-items: center; justify-content: space-between;
-      padding: 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06);
+      margin-top: 16px; padding: 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06);
     }
     .traffic-light.green { background: rgba(21,196,140,0.08); }
     .traffic-light.yellow { background: rgba(201,154,10,0.08); }
     .traffic-light.red { background: rgba(224,82,82,0.08); }
-    .tl-left { display: flex; align-items: center; gap: 10px; }
-    .tl-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .tl-content { display: flex; flex-direction: column; gap: 4px; }
+    .tl-header { display: flex; align-items: center; gap: 8px; }
+    .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .green .tl-dot { background: #15C48C; }
     .yellow .tl-dot { background: #C99A0A; }
     .red .tl-dot { background: #E05252; }
-    .tl-text { display: flex; flex-direction: column; }
-    .tl-text strong { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; }
-    .green .tl-text strong { color: #15C48C; }
-    .yellow .tl-text strong { color: #C99A0A; }
-    .red .tl-text strong { color: #E05252; }
-    .tl-sub { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 400; color: #8A95A8; }
-    .tl-amount { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; }
-    .green .tl-amount { color: #15C48C; }
-    .yellow .tl-amount { color: #C99A0A; }
-    .red .tl-amount { color: #E05252; }
-
-    /* Progress bar */
-    .progress-section { margin-top: 16px; }
-    .progress-track { height: 6px; background: #1E2530; border-radius: 999px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
-    .progress-fill.green { background: linear-gradient(90deg, #15C48C, #20D9A0); }
-    .progress-fill.yellow { background: linear-gradient(90deg, #C99A0A, #DBAF1A); }
-    .progress-fill.red { background: linear-gradient(90deg, #E05252, #F06A6A); }
-    .progress-labels { display: flex; justify-content: space-between; margin-top: 6px; }
-    .progress-labels span { font-family: 'Inter', sans-serif; font-size: 11px; }
-    .progress-labels span:first-child { color: #8A95A8; }
-    .progress-labels span:last-child { color: #697586; }
+    .tl-header strong { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; }
+    .green .tl-header strong { color: #15C48C; }
+    .yellow .tl-header strong { color: #C99A0A; }
+    .red .tl-header strong { color: #E05252; }
+    .tl-sub { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 400; color: #8A95A8; margin-left: 18px; }
+    .tl-amount-warning {
+      font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700;
+      color: #C99A0A; margin-left: 18px; margin-top: 4px;
+    }
 
     /* Sections */
     .section { margin-top: 24px; }
@@ -454,13 +569,15 @@ interface DashboardData {
     /* Transaction list */
     .tx-list { display: flex; flex-direction: column; }
     .tx-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .tx-item:last-child { border: none; }
+    .tx-item.last { border: none; }
     .tx-icon {
-      width: 36px; height: 36px; border-radius: 50%; display: flex;
+      width: 36px; height: 36px; border-radius: 12px; display: flex;
       align-items: center; justify-content: center; flex-shrink: 0;
+      font-size: 16px;
     }
-    .tx-icon.income { background: rgba(21,196,140,0.15); color: #15C48C; }
-    .tx-icon.expense { background: rgba(224,82,82,0.15); color: #E05252; }
+    .tx-icon.income { background: rgba(21,196,140,0.1); }
+    .tx-icon.expense { background: rgba(224,82,82,0.1); }
+    .tx-category-icon { line-height: 1; }
     .tx-info { flex: 1; display: flex; flex-direction: column; }
     .tx-name { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: #F0F2F5; }
     .tx-meta { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 400; color: #697586; }
@@ -477,7 +594,9 @@ interface DashboardData {
     .debt-left { display: flex; align-items: center; gap: 8px; color: #E05252; }
     .debt-text { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: #F0F2F5; }
     .debt-total { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: #E05252; }
-    .debt-bar { height: 4px; background: #1E2530; border-radius: 999px; margin-top: 12px; overflow: hidden; }
+    .debt-stats { display: flex; justify-content: space-between; margin-top: 12px; }
+    .debt-stats span { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500; color: #8A95A8; }
+    .debt-bar { height: 8px; background: #1E2530; border-radius: 999px; margin-top: 8px; overflow: hidden; }
     .debt-fill { height: 100%; background: #E05252; border-radius: 999px; }
     .debt-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 400; color: #8A95A8; margin-top: 6px; display: block; }
 
@@ -504,22 +623,32 @@ interface DashboardData {
     .saving-name { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #F0F2F5; }
     .saving-bar { height: 6px; background: #1E2530; border-radius: 999px; overflow: hidden; }
     .saving-fill { height: 100%; background: #C99A0A; border-radius: 999px; }
+    .saving-empty-bar { height: 100%; border: 1.5px dashed #697586; border-radius: 999px; background: transparent; }
+    .saving-bar.empty { background: transparent; }
     .saving-footer { display: flex; justify-content: space-between; margin-top: 8px; }
     .saving-footer span { font-family: 'Inter', sans-serif; font-size: 13px; }
     .saving-footer span:first-child { font-weight: 500; color: #8A95A8; }
     .saving-footer span:last-child { font-weight: 600; color: #C99A0A; }
+    .saving-motivation { font-family: 'Inter', sans-serif; font-size: 12px; font-style: italic; color: #697586; margin: 8px 0 0; text-align: center; }
 
     /* Checklist */
     .cl-loading { display: flex; flex-direction: column; }
     .cl-error { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #F87171; }
     .cl-error button { background: #1E2530; border: none; border-radius: 999px; padding: 6px 12px; color: #F0F2F5; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; }
-    .cl-summary { display: flex; align-items: flex-start; justify-content: space-between; background: #161B24; border-radius: 24px; border: 1px solid rgba(255,255,255,0.06); padding: 16px; gap: 12px; }
+    .cl-summary {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      background: #161B24; border-radius: 24px; border: 1px solid rgba(255,255,255,0.06);
+      padding: 16px; gap: 12px; cursor: pointer; transition: opacity 0.15s;
+    }
+    .cl-summary:active { opacity: 0.8; }
     .cl-summary-left { flex: 1; display: flex; flex-direction: column; gap: 8px; }
     .cl-month { font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 700; color: #F0F2F5; }
     .cl-streak { display: flex; align-items: center; gap: 6px; }
     .cl-streak span { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #8A95A8; }
+    .cl-summary-right { display: flex; align-items: center; gap: 8px; }
     .cl-circle { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
     .cl-circle-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: #F0F2F5; }
+    .cl-arrow { flex-shrink: 0; }
     .cl-celebration { text-align: center; padding: 16px 0 8px; position: relative; overflow: hidden; }
     .confetti-container { position: absolute; inset: 0; pointer-events: none; }
     .confetti-piece { position: absolute; top: -8px; left: calc(var(--x) * 1%); width: 6px; height: 6px; border-radius: 2px; background: var(--c); animation: confettiFall 1s ease-out var(--d) forwards; opacity: 0; }
@@ -527,8 +656,11 @@ interface DashboardData {
     .cl-done-text { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: #15C48C; margin: 0; }
     .cl-done-sub { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: #8A95A8; margin: 4px 0 0; }
     .cl-items { display: flex; flex-direction: column; margin-top: 12px; }
-    .cl-item { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .cl-item.completed { opacity: 0.6; }
+    .cl-item {
+      display: flex; align-items: center; gap: 10px; padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .cl-item.completed { background: rgba(255,255,255,0.03); }
     .cl-item.completed .cl-item-name { color: #8A95A8; text-decoration: line-through; }
     .cl-check { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; flex-shrink: 0; position: relative; }
     .cl-check::before { content: ''; width: 22px; height: 22px; border-radius: 6px; border: 2px solid #697586; background: transparent; position: absolute; transition: all 150ms; }
@@ -557,15 +689,20 @@ interface DashboardData {
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* FAB */
-    .fab-container { position: fixed; bottom: 80px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 90; }
-    .fab-menu { display: flex; flex-direction: column; gap: 8px; }
+    .fab-container { position: fixed; bottom: 80px; right: 20px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 8px; z-index: 90; }
+    .fab-menu { display: flex; flex-direction: column-reverse; gap: 8px; }
     .fab-option {
       display: flex; align-items: center; gap: 8px; padding: 10px 16px; border: none;
       border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
-      cursor: pointer; white-space: nowrap; transition: opacity 0.2s;
+      cursor: pointer; white-space: nowrap; opacity: 0; transform: translateY(16px);
+      animation: fabOptionIn 0.2s ease forwards;
     }
-    .fab-option.income { background: rgba(21,196,140,0.15); color: #15C48C; }
-    .fab-option.expense { background: rgba(224,82,82,0.15); color: #E05252; }
+    @keyframes fabOptionIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fab-option.income { background: #161B24; color: #15C48C; animation-delay: 0.05s; }
+    .fab-option.task { background: #161B24; color: #E4B3E9; animation-delay: 0.1s; }
+    .fab-option.expense { background: #161B24; color: #E05252; }
     .fab-main {
       width: 56px; height: 56px; border-radius: 50%; border: none;
       background: #E4B3E9; color: #0C0F14; cursor: pointer;
@@ -590,6 +727,31 @@ export class DashboardComponent {
   }
   unreadCount = 0
   fabOpen = false
+  showUserMenu = false
+  readonly BUDGET_THRESHOLD = 60
+
+  get greeting(): string {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Buenos días'
+    if (hour < 18) return 'Buenas tardes'
+    return 'Buenas noches'
+  }
+
+  get currentDate(): string {
+    const now = new Date()
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    return `${dayNames[now.getDay()]} ${now.getDate()} de ${monthNames[now.getMonth()]}`
+  }
+
+  get userName(): string {
+    const user = this.auth.user as any
+    return user?.name || 'Usuario'
+  }
+
+  getCategoryIcon(category: string): string {
+    return CATEGORY_ICONS[category] || '📦'
+  }
 
   // Checklist
   clState: 'loading' | 'loaded' | 'error' = 'loading'
@@ -606,6 +768,7 @@ export class DashboardComponent {
   constructor(
     private router: Router,
     private api: ApiService,
+    private auth: AuthService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -806,8 +969,10 @@ export class DashboardComponent {
   }
 
   get savingPercent(): number {
-    if (!this.data.savingGoal) return 0
-    return Math.round((this.data.savingGoal.current / this.data.savingGoal.target) * 100)
+    if (!this.data.savingGoal || this.data.savingGoal.target === 0) return 0
+    const percent = (this.data.savingGoal.current / this.data.savingGoal.target) * 100
+    if (percent > 0 && percent < 1) return 1
+    return Math.round(percent * 100) / 100
   }
 
   onNotificationClick(): void {
@@ -815,19 +980,29 @@ export class DashboardComponent {
   }
 
   onProfileClick(): void {
-    // navigate to /perfil (future)
+    this.router.navigate(['/perfil'])
+  }
+
+  toggleUserMenu(): void {
+    this.showUserMenu = !this.showUserMenu
+  }
+
+  logout(): void {
+    this.auth.logout()
   }
 
   onAddMovement(): void {
     this.router.navigate(['/movimientos'])
   }
 
-  onFabAction(type: 'income' | 'expense'): void {
+  onFabAction(type: 'income' | 'expense' | 'task'): void {
     this.fabOpen = false
     if (type === 'income') {
       this.router.navigate(['/ingresos/nuevo'])
-    } else {
+    } else if (type === 'expense') {
       this.router.navigate(['/gastos/nuevo'])
+    } else if (type === 'task') {
+      this.router.navigate(['/tareas'])
     }
   }
 }

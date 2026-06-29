@@ -4,16 +4,18 @@ import { Observable } from 'rxjs'
 import { environment } from '../../environments/environment'
 
 export interface ApiSuccessResponse<T> {
-  success: boolean
+  ok: boolean
   data: T
+  mensaje?: string
 }
 
 export interface ApiPaginatedResponse<T> {
-  success: boolean
+  ok: boolean
   data: T[]
   total: number
   page: number
   limit: number
+  mensaje?: string
 }
 
 @Injectable({ providedIn: 'root' })

@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core'
 import { Router, ActivatedRoute, RouterLink } from '@angular/router'
-import { NgIf, NgFor, DecimalPipe } from '@angular/common'
+import { NgIf, NgFor, DecimalPipe, DatePipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { Subject, takeUntil } from 'rxjs'
 import { TarjetasService } from '../../../services/tarjetas.service'
@@ -11,7 +11,7 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
 @Component({
   selector: 'app-detalle-tarjeta',
   standalone: true,
-  imports: [NgIf, NgFor, DecimalPipe, RouterLink, FormsModule],
+  imports: [NgIf, NgFor, DecimalPipe, DatePipe, RouterLink, FormsModule],
   template: `
     <div class="container">
       <header class="header">

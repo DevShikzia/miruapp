@@ -774,8 +774,7 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (statement) => {
-          console.log('[DEBUG] Statement loaded:', statement)
-          console.log('[DEBUG] Expenses:', statement?.expenses?.length, 'Items:', statement?.items?.length)
+          console.log('[DEBUG] Statement loaded for card:', statement.cardId, 'expenses:', statement.expenses.length, statement.expenses)
           this.statement = statement
           this.state = 'loaded'
           this.cdr.markForCheck()

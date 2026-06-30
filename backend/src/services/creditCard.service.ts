@@ -89,18 +89,22 @@ export async function getStatement(cardId: string, familyId: string, month?: str
   const { periodStartStr, periodEndStr, dueDateStr } = currentPeriod(card, year, refMonth)
   const currentPeriodYYYYMM = periodToYYYYMM(year, refMonth + 1)
 
-  const cardItemQuery: Record<string, unknown> = { cardId, familyId }
+  // Para recurring items: filtrar isActive solo en período actual
+  // Para installment items: siempre mostrar (isActive no los afecta para mostrarse)
+  const recurringQuery: Record<string, unknown> = { cardId, familyId, type: 'recurring' }
   if (isCurrentPeriod) {
-    cardItemQuery.isActive = true
+    recurringQuery.isActive = true
   }
+  const installmentQuery: Record<string, unknown> = { cardId, familyId, type: 'installment' }
 
-  const [expenses, cardItems, currentRate] = await Promise.all([
+  const [expenses, recurringItems, installmentItems, currentRate] = await Promise.all([
     ExpenseModel.find({
       familyId,
       creditCardId: cardId,
       date: { $gte: periodStartStr, $lte: periodEndStr },
     }).sort({ date: -1 }),
-    CardItemModel.find(cardItemQuery),
+    CardItemModel.find(recurringQuery),
+    CardItemModel.find(installmentQuery),
     getTarjetaRate().catch(() => 1600),
   ])
 
@@ -118,60 +122,59 @@ export async function getStatement(cardId: string, familyId: string, month?: str
 
   const items: CardStatementItem[] = []
 
-  for (const item of cardItems) {
-    if (item.type === 'recurring') {
-      let amount = item.amount
-      let needsUpdate = false
-      let rateChange: number | undefined
-      if (item.currency === 'USD' && item.rateUsed && currentRate) {
-        const diff = Math.abs((currentRate - item.rateUsed) / item.rateUsed * 100)
-        needsUpdate = diff > 5
-        rateChange = Math.round(diff * 10) / 10
-      }
-      items.push({
-        _id: item._id.toString(),
-        amount,
-        category: item.category,
-        description: item.description,
-        date: periodStartStr,
-        createdBy: item.createdBy,
-        source: 'card_item',
-        itemType: 'recurring',
-        currency: item.currency as 'ARS' | 'USD',
-        amountUsd: item.amountUsd,
-        needsUpdate,
-        rateChange,
-        totalAmount: item.totalAmount,
-        totalInstallments: item.totalInstallments,
-        installmentManual: item.installmentManual,
-        isPaid: !item.isActive,
-        startPeriod: item.startPeriod.toISOString(),
-      })
-    } else if (item.type === 'installment') {
-      const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, item.totalInstallments || 1)
-      if (current !== null) {
-        const remaining = (item.totalInstallments || 1) - current
-        items.push({
-          _id: item._id.toString(),
-          amount: item.amount,
-          category: item.category,
-          description: item.description,
-          date: periodStartStr,
-          createdBy: item.createdBy,
-          source: 'card_item',
-          itemType: 'installment',
-          currency: item.currency as 'ARS' | 'USD',
-          amountUsd: item.amountUsd,
-          currentInstallment: current,
-          remainingInstallments: remaining,
-          totalAmount: item.totalAmount,
-          totalInstallments: item.totalInstallments,
-          installmentManual: item.installmentManual,
-          isPaid: !item.isActive,
-          startPeriod: item.startPeriod.toISOString(),
-        })
-      }
+  for (const item of recurringItems) {
+    let amount = item.amount
+    let needsUpdate = false
+    let rateChange: number | undefined
+    if (item.currency === 'USD' && item.rateUsed && currentRate) {
+      const diff = Math.abs((currentRate - item.rateUsed) / item.rateUsed * 100)
+      needsUpdate = diff > 5
+      rateChange = Math.round(diff * 10) / 10
     }
+    items.push({
+      _id: item._id.toString(),
+      amount,
+      category: item.category,
+      description: item.description,
+      date: periodStartStr,
+      createdBy: item.createdBy,
+      source: 'card_item',
+      itemType: 'recurring',
+      currency: item.currency as 'ARS' | 'USD',
+      amountUsd: item.amountUsd,
+      needsUpdate,
+      rateChange,
+      totalAmount: item.totalAmount,
+      totalInstallments: item.totalInstallments,
+      installmentManual: item.installmentManual,
+      isPaid: !item.isActive,
+      startPeriod: item.startPeriod.toISOString(),
+    })
+  }
+
+  for (const item of installmentItems) {
+    const totalInst = item.totalInstallments || 1
+    const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, totalInst)
+    const remaining = totalInst - (current ?? totalInst)
+    items.push({
+      _id: item._id.toString(),
+      amount: item.amount,
+      category: item.category,
+      description: item.description,
+      date: periodStartStr,
+      createdBy: item.createdBy,
+      source: 'card_item',
+      itemType: 'installment',
+      currency: item.currency as 'ARS' | 'USD',
+      amountUsd: item.amountUsd,
+      currentInstallment: current ?? totalInst,
+      remainingInstallments: Math.max(0, remaining),
+      totalAmount: item.totalAmount,
+      totalInstallments: item.totalInstallments,
+      installmentManual: item.installmentManual,
+      isPaid: !item.isActive,
+      startPeriod: item.startPeriod.toISOString(),
+    })
   }
 
   const expenseTotal = expenseItems.reduce((s, e) => s + e.amount, 0)
@@ -211,11 +214,13 @@ export async function payStatement(
   const now = new Date()
   const { periodEndStr } = currentPeriod(card, now.getFullYear(), now.getMonth())
 
+  // Solo marcar recurring como pagados. Los installment siguen activos hasta q se completen todas las cuotas
   await CardItemModel.updateMany(
     {
       cardId,
       familyId,
       isActive: true,
+      type: 'recurring',
     },
     { $set: { isActive: false } }
   )

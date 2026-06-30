@@ -89,12 +89,9 @@ export async function getStatement(cardId: string, familyId: string, month?: str
   const { periodStartStr, periodEndStr, dueDateStr } = currentPeriod(card, year, refMonth)
   const currentPeriodYYYYMM = periodToYYYYMM(year, refMonth + 1)
 
-  // Para recurring items: filtrar isActive solo en período actual
-  // Para installment items: siempre mostrar (isActive no los afecta para mostrarse)
+  // Para recurring items: siempre traer todos (pagados y no pagados), el frontend muestra "Pagado" si isActive=false
+  // Para installment items: siempre traer todos
   const recurringQuery: Record<string, unknown> = { cardId, familyId, type: 'recurring' }
-  if (isCurrentPeriod) {
-    recurringQuery.isActive = true
-  }
   const installmentQuery: Record<string, unknown> = { cardId, familyId, type: 'installment' }
 
   const [expenses, recurringItems, installmentItems, currentRate] = await Promise.all([

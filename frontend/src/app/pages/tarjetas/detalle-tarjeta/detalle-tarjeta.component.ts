@@ -122,7 +122,8 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
                   <div class="expense-info">
                     <span class="expense-desc">
                       {{ item.description }}
-                      <span class="item-badge" *ngIf="item.itemType === 'recurring'">recurrente</span>
+                      <span class="item-badge item-paid" *ngIf="item.itemType === 'recurring' && item.isPaid">Pagado</span>
+                      <span class="item-badge" *ngIf="item.itemType === 'recurring' && !item.isPaid">recurrente</span>
                       <span class="item-badge badge-cuota" *ngIf="item.itemType === 'installment'">
                         {{ item.currentInstallment }}/{{ item.currentInstallment! + (item.remainingInstallments ?? 0) }}
                       </span>
@@ -139,12 +140,14 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
                     <span *ngIf="item.currency === 'USD'" class="usd-badge">USD</span>
                     $ {{ item.amount | number:'1.0-0':'es-AR' }}
                   </span>
-                  <button class="item-edit" (click)="openItemForm(item)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                  </button>
-                  <button class="item-delete" (click)="deleteItem(item._id)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
+                  <ng-container *ngIf="!item.isPaid">
+                    <button class="item-edit" (click)="openItemForm(item)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </button>
+                    <button class="item-delete" (click)="deleteItem(item._id)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  </ng-container>
                 </div>
               </div>
             </div>
@@ -473,6 +476,7 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
     .usd-badge { font-size: 10px; font-weight: 700; color: #22C55E; background: rgba(34,197,94,0.12); padding: 2px 6px; border-radius: 4px; }
     .item-badge { font-size: 10px; font-weight: 600; color: #697586; background: #1E2530; padding: 2px 8px; border-radius: 999px; }
     .badge-cuota { color: #5B8DEF; background: rgba(91,141,239,0.12); }
+    .item-paid { color: #22C55E; background: rgba(34,197,94,0.12); }
     .rate-warning { color: #C99A0A; font-size: 11px; font-weight: 500; }
     .item-delete { background: none; border: none; padding: 4px; cursor: pointer; display: flex; align-items: center; opacity: 0.4; transition: opacity 150ms; }
     .item-delete:hover { opacity: 1; }

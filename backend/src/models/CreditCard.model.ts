@@ -9,6 +9,7 @@ export interface ICreditCardDocument extends Document {
   closingDay: number
   dueDay: number
   creditLimit?: number
+  creditUsed: number
   bankName?: string
   color?: string
   notes?: string
@@ -25,6 +26,7 @@ const CreditCardSchema = new Schema<ICreditCardDocument>({
   closingDay: { type: Number, required: true, min: 1, max: 28 },
   dueDay: { type: Number, required: true, min: 1, max: 28 },
   creditLimit: { type: Number, min: 0 },
+  creditUsed: { type: Number, default: 0 },
   bankName: { type: String, maxlength: 50 },
   color: { type: String, match: /^#[0-9a-fA-F]{6}$/ },
   notes: { type: String, maxlength: 200 },

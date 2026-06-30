@@ -53,8 +53,8 @@ import type { CreditCardData, CardStatement } from '@shared/types/credit-card.ty
             </div>
             <div class="card-right">
               <div class="card-balance" *ngIf="card.creditLimit">
-                <span class="balance-gastado">$ {{ getStatementTotal(card._id) | number:'1.0-0':'es-AR' }}</span>
-                <span class="balance-disponible">/ $ {{ getDisponible(card) | number:'1.0-0':'es-AR' }}</span>
+                <span class="balance-gastado">$ {{ card.creditUsed | number:'1.0-0':'es-AR' }}</span>
+                <span class="balance-disponible">/ $ {{ (card.creditLimit - card.creditUsed) | number:'1.0-0':'es-AR' }}</span>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </div>
@@ -241,12 +241,7 @@ export class ListaTarjetasComponent implements OnInit, OnDestroy {
     this.router.navigate(['/tarjetas/nueva'])
   }
 
-  getStatementTotal(cardId: string): number {
-    return this.statements.get(cardId)?.totalAmount ?? 0
-  }
-
   getDisponible(card: CreditCardData): number {
-    const spent = this.getStatementTotal(card._id)
-    return (card.creditLimit || 0) - spent
+    return (card.creditLimit || 0) - (card.creditUsed ?? 0)
   }
 }

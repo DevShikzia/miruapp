@@ -17,6 +17,7 @@ function toData(doc: ICreditCardDocument): CreditCardData {
     closingDay: doc.closingDay,
     dueDay: doc.dueDay,
     creditLimit: doc.creditLimit,
+    creditUsed: doc.creditUsed ?? 0,
     bankName: doc.bankName,
     color: doc.color,
     notes: doc.notes,
@@ -79,31 +80,51 @@ export async function getStatement(cardId: string, familyId: string, month?: str
   if (!card) throw new NotFoundError('Tarjeta no encontrada')
 
   const now = new Date()
-  const isCurrentPeriod = !month ||
-    (parseInt(month.split('-')[0], 10) === now.getFullYear() &&
-     parseInt(month.split('-')[1], 10) === now.getMonth() + 1)
-
   const year = month ? parseInt(month.split('-')[0], 10) : now.getFullYear()
   const refMonth = month ? parseInt(month.split('-')[1], 10) - 1 : now.getMonth()
 
   const { periodStartStr, periodEndStr, dueDateStr } = currentPeriod(card, year, refMonth)
   const currentPeriodYYYYMM = periodToYYYYMM(year, refMonth + 1)
 
-  // Para recurring items: siempre traer todos (pagados y no pagados), el frontend muestra "Pagado" si isActive=false
-  // Para installment items: siempre traer todos
-  const recurringQuery: Record<string, unknown> = { cardId, familyId, type: 'recurring' }
-  const installmentQuery: Record<string, unknown> = { cardId, familyId, type: 'installment' }
+  const recurringItems = await CardItemModel.find({ cardId, familyId, type: 'recurring' })
+  const installmentItems = await CardItemModel.find({ cardId, familyId, type: 'installment' })
+  const expenses = await ExpenseModel.find({
+    familyId,
+    creditCardId: cardId,
+    date: { $gte: periodStartStr, $lte: periodEndStr },
+  }).sort({ date: -1 })
+  const currentRate = await getTarjetaRate().catch(() => 1600)
 
-  const [expenses, recurringItems, installmentItems, currentRate] = await Promise.all([
-    ExpenseModel.find({
-      familyId,
-      creditCardId: cardId,
-      date: { $gte: periodStartStr, $lte: periodEndStr },
-    }).sort({ date: -1 }),
-    CardItemModel.find(recurringQuery),
-    CardItemModel.find(installmentQuery),
-    getTarjetaRate().catch(() => 1600),
-  ])
+  for (const item of recurringItems) {
+    if (item.paidThroughMonth && item.paidThroughMonth < currentPeriodYYYYMM) {
+      const newStartPeriod = new Date(year, refMonth, card.closingDay + 1)
+      await CardItemModel.create({
+        cardId: item.cardId,
+        familyId: item.familyId,
+        createdBy: item.createdBy,
+        description: item.description,
+        category: item.category,
+        type: 'recurring',
+        currency: item.currency,
+        amount: item.amount,
+        amountUsd: item.amountUsd,
+        rateUsed: item.rateUsed,
+        totalAmount: item.totalAmount,
+        totalInstallments: item.totalInstallments,
+        installmentManual: item.installmentManual,
+        startPeriod: newStartPeriod,
+        paidThroughMonth: currentPeriodYYYYMM,
+        isActive: true,
+      })
+    }
+  }
+
+  const updatedRecurringItems = await CardItemModel.find({
+    cardId,
+    familyId,
+    type: 'recurring',
+    paidThroughMonth: currentPeriodYYYYMM,
+  })
 
   const expenseItems: CardStatementItem[] = expenses.map(e => ({
     _id: e._id.toString(),
@@ -119,8 +140,7 @@ export async function getStatement(cardId: string, familyId: string, month?: str
 
   const items: CardStatementItem[] = []
 
-  for (const item of recurringItems) {
-    let amount = item.amount
+  for (const item of updatedRecurringItems) {
     let needsUpdate = false
     let rateChange: number | undefined
     if (item.currency === 'USD' && item.rateUsed && currentRate) {
@@ -130,7 +150,7 @@ export async function getStatement(cardId: string, familyId: string, month?: str
     }
     items.push({
       _id: item._id.toString(),
-      amount,
+      amount: item.amount,
       category: item.category,
       description: item.description,
       date: periodStartStr,
@@ -144,14 +164,14 @@ export async function getStatement(cardId: string, familyId: string, month?: str
       totalAmount: item.totalAmount,
       totalInstallments: item.totalInstallments,
       installmentManual: item.installmentManual,
-      isPaid: !item.isActive,
       startPeriod: item.startPeriod.toISOString(),
     })
   }
 
   for (const item of installmentItems) {
+    if (new Date(item.startPeriod) > new Date(periodEndStr)) continue
     const totalInst = item.totalInstallments || 1
-    const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, totalInst)
+    const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, totalInst, card.closingDay)
     if (current === null) continue
     const remaining = totalInst - current
     items.push({
@@ -170,7 +190,6 @@ export async function getStatement(cardId: string, familyId: string, month?: str
       totalAmount: item.totalAmount,
       totalInstallments: item.totalInstallments,
       installmentManual: item.installmentManual,
-      isPaid: !item.isActive,
       startPeriod: item.startPeriod.toISOString(),
     })
   }
@@ -210,18 +229,23 @@ export async function payStatement(
   if (!card) throw new NotFoundError('Tarjeta no encontrada')
 
   const now = new Date()
-  const { periodEndStr } = currentPeriod(card, now.getFullYear(), now.getMonth())
+  const currentMonthYYYYMM = periodToYYYYMM(now.getFullYear(), now.getMonth())
 
-  // Solo marcar recurring como pagados. Los installment siguen activos hasta q se completen todas las cuotas
-  await CardItemModel.updateMany(
-    {
-      cardId,
-      familyId,
-      isActive: true,
-      type: 'recurring',
-    },
-    { $set: { isActive: false } }
-  )
+  const recurringItems = await CardItemModel.find({
+    cardId,
+    familyId,
+    type: 'recurring',
+  })
+
+  for (const item of recurringItems) {
+    if (item.paidThroughMonth === currentMonthYYYYMM) {
+      await CardItemModel.findByIdAndUpdate(item._id, {
+        $set: { paidThroughMonth: currentMonthYYYYMM },
+      })
+    }
+  }
+
+  await CreditCardModel.findByIdAndUpdate(cardId, { $set: { creditUsed: 0 } })
 
   const totalAmount = data.amount + (data.commission ?? 0)
   const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -231,6 +255,7 @@ export async function payStatement(
     const sourceCard = await CreditCardModel.findOne({ _id: data.sourceCardId, familyId })
     if (!sourceCard) throw new NotFoundError('Tarjeta origen no encontrada')
 
+    const newStartPeriod = new Date(now.getFullYear(), now.getMonth(), sourceCard.closingDay + 1)
     await CardItemModel.create({
       cardId: data.sourceCardId,
       familyId,
@@ -240,8 +265,13 @@ export async function payStatement(
       type: 'recurring',
       currency: 'ARS',
       amount: totalAmount,
-      isActive: false,
-      startPeriod: new Date(),
+      startPeriod: newStartPeriod,
+      paidThroughMonth: currentMonthYYYYMM,
+      isActive: true,
+    })
+
+    await CreditCardModel.findByIdAndUpdate(data.sourceCardId, {
+      $inc: { creditUsed: totalAmount },
     })
   } else {
     const paymentTypeMap: Record<string, 'cash' | 'debit_card' | 'transfer'> = {

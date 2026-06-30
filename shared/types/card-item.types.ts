@@ -17,6 +17,7 @@ export interface CardItem {
   totalInstallments?: number
   installmentManual?: boolean
   startPeriod: string
+  paidThroughMonth?: string | null
   isActive: boolean
   createdAt: string
 }
@@ -34,6 +35,7 @@ export interface CreateCardItemRequest {
   totalInstallments?: number
   installmentManual?: boolean
   startPeriod: string
+  paidThroughMonth?: string
 }
 
 export interface UpdateCardItemRequest {
@@ -48,5 +50,6 @@ export interface UpdateCardItemRequest {
   totalInstallments?: number
   installmentManual?: boolean
   startPeriod?: string
+  paidThroughMonth?: string
   isActive?: boolean
 }

@@ -13,6 +13,7 @@ export const createCardItemSchema = z.object({
   totalInstallments: z.number().int().min(1).max(60).optional(),
   installmentManual: z.boolean().optional(),
   startPeriod: z.string().datetime({ message: 'Fecha inválida' }),
+  paidThroughMonth: z.string().optional(),
 })
 
 export const updateCardItemSchema = z.object({
@@ -27,5 +28,6 @@ export const updateCardItemSchema = z.object({
   totalInstallments: z.number().int().min(1).max(60).optional(),
   installmentManual: z.boolean().optional(),
   startPeriod: z.string().datetime().optional(),
+  paidThroughMonth: z.string().optional(),
   isActive: z.boolean().optional(),
 })

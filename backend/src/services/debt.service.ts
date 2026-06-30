@@ -1,6 +1,7 @@
 import { FilterQuery } from 'mongoose'
 import { DebtModel, IDebtDocument } from '../models/Debt.model'
 import { ExpenseModel } from '../models/Expense.model'
+import { CreditCardModel } from '../models/CreditCard.model'
 import { UserModel } from '../models/User.model'
 import {
   CreateDebtRequest, UpdateDebtRequest,
@@ -107,7 +108,7 @@ export async function addPayment(debtId: string, data: CreatePaymentRequest, fam
   await doc.save()
 
   if (data.paymentType) {
-    await ExpenseModel.create({
+    const expense = await ExpenseModel.create({
       amount: data.amount,
       category: 'debt',
       description: `Pago deuda: ${doc.personName}`,
@@ -118,6 +119,11 @@ export async function addPayment(debtId: string, data: CreatePaymentRequest, fam
       createdBy: userId,
       isEssential: false,
     })
+    if (data.paymentType === 'credit_card' && data.creditCardId) {
+      await CreditCardModel.findByIdAndUpdate(data.creditCardId, {
+        $inc: { creditUsed: data.amount },
+      })
+    }
   }
 
   return await toDebtData(doc)

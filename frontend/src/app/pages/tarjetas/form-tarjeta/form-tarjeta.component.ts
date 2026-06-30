@@ -335,6 +335,7 @@ export class FormTarjetaComponent implements OnInit, OnDestroy {
       color: this.selectedColor || undefined,
       notes: this.notes || undefined,
       isActive: true,
+      creditUsed: 0,
     }
 
     const request = this.isEdit

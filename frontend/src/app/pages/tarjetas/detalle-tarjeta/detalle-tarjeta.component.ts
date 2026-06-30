@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core'
 import { Router, ActivatedRoute, RouterLink } from '@angular/router'
 import { NgIf, NgFor, DecimalPipe, DatePipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
-import { Subject, takeUntil } from 'rxjs'
+import { Subject, takeUntil, forkJoin, map } from 'rxjs'
 import { TarjetasService } from '../../../services/tarjetas.service'
 import { CardItemService } from '../../../services/card-item.service'
 import type { CreditCardData, CardStatement, CardStatementItem } from '@shared/types/credit-card.types'
@@ -61,14 +61,14 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
             <span>L\u00edmite</span>
           </div>
           <div class="bar-values">
-            <span class="bar-current">$ {{ (statement?.totalAmount ?? 0) | number:'1.0-0':'es-AR' }}</span>
+            <span class="bar-current">$ {{ card.creditUsed | number:'1.0-0':'es-AR' }}</span>
             <span class="bar-max">$ {{ card.creditLimit | number:'1.0-0':'es-AR' }}</span>
           </div>
           <div class="bar-track">
             <div class="bar-fill" [style.width.%]="barPercent" [style.background]="barColor"></div>
           </div>
           <div class="bar-available" *ngIf="card.creditLimit">
-            Disponible: $ {{ (card.creditLimit - (statement?.totalAmount ?? 0)) | number:'1.0-0':'es-AR' }}
+            Disponible: $ {{ (card.creditLimit - card.creditUsed) | number:'1.0-0':'es-AR' }}
           </div>
         </div>
 
@@ -122,8 +122,7 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
                   <div class="expense-info">
                     <span class="expense-desc">
                       {{ item.description }}
-                      <span class="item-badge item-paid" *ngIf="item.itemType === 'recurring' && item.isPaid">Pagado</span>
-                      <span class="item-badge" *ngIf="item.itemType === 'recurring' && !item.isPaid">recurrente</span>
+                      <span class="item-badge" *ngIf="item.itemType === 'recurring'">recurrente</span>
                       <span class="item-badge badge-cuota" *ngIf="item.itemType === 'installment'">
                         {{ item.currentInstallment }}/{{ item.currentInstallment! + (item.remainingInstallments ?? 0) }}
                       </span>
@@ -140,14 +139,12 @@ import type { CreateCardItemRequest, UpdateCardItemRequest, CardItem } from '@sh
                     <span *ngIf="item.currency === 'USD'" class="usd-badge">USD</span>
                     $ {{ item.amount | number:'1.0-0':'es-AR' }}
                   </span>
-                  <ng-container *ngIf="!item.isPaid">
-                    <button class="item-edit" (click)="openItemForm(item)">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <button class="item-delete" (click)="deleteItem(item._id)">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                  </ng-container>
+                  <button class="item-edit" (click)="openItemForm(item)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  </button>
+                  <button class="item-delete" (click)="deleteItem(item._id)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#697586" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -597,8 +594,8 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
   }
 
   get barPercent(): number {
-    if (!this.card?.creditLimit || !this.statement) return 0
-    return Math.min(100, Math.round((this.statement.totalAmount / this.card.creditLimit) * 100))
+    if (!this.card?.creditLimit) return 0
+    return Math.min(100, Math.round(((this.card.creditUsed ?? 0) / this.card.creditLimit) * 100))
   }
 
   get barColor(): string {
@@ -691,7 +688,7 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
 
   private loadHistoryPeriods(): void {
     const now = new Date()
-    const periods: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string }[] = []
+    const requests: any[] = []
 
     for (let i = 0; i <= 5; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
@@ -700,24 +697,27 @@ export class DetalleTarjetaComponent implements OnInit, OnDestroy {
       const monthStr = `${year}-${String(month).padStart(2, '0')}`
       const label = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
-      this.tarjetasService.getStatement(this.cardId, monthStr)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (stmt) => {
-            periods.push({
-              label: label.charAt(0).toUpperCase() + label.slice(1),
-              start: stmt.periodStart,
-              end: stmt.periodEnd,
-              total: stmt.totalAmount,
-              isPaid: stmt.items.length > 0 ? stmt.items.every(it => it.isPaid) : false,
-              month: monthStr,
-            })
-            periods.sort((a, b) => b.month.localeCompare(a.month))
-            this.historyPeriods = [...periods]
-          },
-          error: () => {},
-        })
+      requests.push(
+        this.tarjetasService.getStatement(this.cardId, monthStr).pipe(
+          map(stmt => ({
+            label: label.charAt(0).toUpperCase() + label.slice(1),
+            start: stmt.periodStart,
+            end: stmt.periodEnd,
+            total: stmt.totalAmount,
+            isPaid: stmt.items.length > 0 ? stmt.items.every((it: any) => it.isPaid) : false,
+            month: monthStr,
+          }))
+        )
+      )
     }
+
+    forkJoin(requests).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (periods) => {
+        periods.sort((a, b) => b.month.localeCompare(a.month))
+        this.historyPeriods = periods
+      },
+      error: () => {},
+    })
   }
 
   selectHistoryPeriod(period: { label: string; start: string; end: string; total: number; isPaid: boolean; month: string }): void {

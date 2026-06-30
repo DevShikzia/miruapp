@@ -15,6 +15,7 @@ export interface ICardItemDocument extends Document {
   totalInstallments?: number
   installmentManual?: boolean
   startPeriod: Date
+  paidThroughMonth: string | null
   isActive: boolean
   createdAt: Date
 }
@@ -34,11 +35,13 @@ const CardItemSchema = new Schema<ICardItemDocument>({
   totalInstallments: { type: Number, min: 1, max: 60 },
   installmentManual: { type: Boolean, default: undefined },
   startPeriod: { type: Date, required: true },
+  paidThroughMonth: { type: String, default: null },
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 })
 
 CardItemSchema.index({ familyId: 1, isActive: -1 })
 CardItemSchema.index({ cardId: 1, isActive: -1 })
+CardItemSchema.index({ cardId: 1, paidThroughMonth: 1 })
 
 export const CardItemModel = mongoose.model<ICardItemDocument>('CardItem', CardItemSchema)

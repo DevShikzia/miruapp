@@ -10,6 +10,7 @@ export interface ICreditCard {
   closingDay: number
   dueDay: number
   creditLimit?: number
+  creditUsed: number
   bankName?: string
   color?: string
   notes?: string
@@ -27,6 +28,7 @@ export interface CreditCardData {
   closingDay: number
   dueDay: number
   creditLimit?: number
+  creditUsed: number
   bankName?: string
   color?: string
   notes?: string

@@ -1,5 +1,6 @@
 import { SavingModel, ISavingDocument } from '../models/Saving.model'
 import { ExpenseModel } from '../models/Expense.model'
+import { CreditCardModel } from '../models/CreditCard.model'
 import {
   CreateSavingRequest, UpdateSavingRequest,
   AddContributionRequest,
@@ -78,7 +79,7 @@ export async function addContribution(id: string, data: AddContributionRequest, 
   await doc.save()
 
   if (data.paymentType) {
-    await ExpenseModel.create({
+    const expense = await ExpenseModel.create({
       amount: data.amount,
       category: 'savings',
       description: `Ahorro: ${doc.name}`,
@@ -89,6 +90,11 @@ export async function addContribution(id: string, data: AddContributionRequest, 
       createdBy: userId,
       isEssential: false,
     })
+    if (data.paymentType === 'credit_card' && data.creditCardId) {
+      await CreditCardModel.findByIdAndUpdate(data.creditCardId, {
+        $inc: { creditUsed: data.amount },
+      })
+    }
   }
 
   return toSavingData(doc)

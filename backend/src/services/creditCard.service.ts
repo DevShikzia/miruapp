@@ -155,7 +155,8 @@ export async function getStatement(cardId: string, familyId: string, month?: str
   for (const item of installmentItems) {
     const totalInst = item.totalInstallments || 1
     const current = cardItemService.getCurrentInstallment(item.startPeriod, currentPeriodYYYYMM, totalInst)
-    const remaining = totalInst - (current ?? totalInst)
+    if (current === null) continue
+    const remaining = totalInst - current
     items.push({
       _id: item._id.toString(),
       amount: item.amount,
@@ -167,7 +168,7 @@ export async function getStatement(cardId: string, familyId: string, month?: str
       itemType: 'installment',
       currency: item.currency as 'ARS' | 'USD',
       amountUsd: item.amountUsd,
-      currentInstallment: current ?? totalInst,
+      currentInstallment: current,
       remainingInstallments: Math.max(0, remaining),
       totalAmount: item.totalAmount,
       totalInstallments: item.totalInstallments,
